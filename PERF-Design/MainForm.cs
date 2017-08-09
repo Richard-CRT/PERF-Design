@@ -26,7 +26,6 @@ namespace PERF_Design
             InitializeComponent();
             Saved = true;
             FileName = null;
-
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -208,7 +207,6 @@ namespace PERF_Design
             CheckBoxWireTool.Checked = false;
             CheckBoxEraseWireTool.Checked = false;
             CheckBoxChipTool.Checked = false;
-            CheckBoxRotateChipTool.Checked = false;
             CheckBoxEraseChipTool.Checked = false;
             GridContainer.ResetSuggestions();
         }
@@ -221,7 +219,6 @@ namespace PERF_Design
             CheckBoxWireTool.Checked = false;
             CheckBoxEraseWireTool.Checked = false;
             CheckBoxChipTool.Checked = false;
-            CheckBoxRotateChipTool.Checked = false;
             CheckBoxEraseChipTool.Checked = false;
             GridContainer.ResetSuggestions();
         }
@@ -234,7 +231,6 @@ namespace PERF_Design
             CheckBoxWireTool.Checked = true;
             CheckBoxEraseWireTool.Checked = false;
             CheckBoxChipTool.Checked = false;
-            CheckBoxRotateChipTool.Checked = false;
             CheckBoxEraseChipTool.Checked = false;
             GridContainer.ResetSuggestions();
         }
@@ -247,7 +243,6 @@ namespace PERF_Design
             CheckBoxWireTool.Checked = false;
             CheckBoxEraseWireTool.Checked = true;
             CheckBoxChipTool.Checked = false;
-            CheckBoxRotateChipTool.Checked = false;
             CheckBoxEraseChipTool.Checked = false;
             GridContainer.ResetSuggestions();
         }
@@ -260,20 +255,6 @@ namespace PERF_Design
             CheckBoxWireTool.Checked = false;
             CheckBoxEraseWireTool.Checked = false;
             CheckBoxChipTool.Checked = true;
-            CheckBoxRotateChipTool.Checked = false;
-            CheckBoxEraseChipTool.Checked = false;
-            GridContainer.ResetSuggestions();
-        }
-
-        private void CheckBoxRotateChipTool_Click(object sender, EventArgs e)
-        {
-            GridContainer.SelectedTool = Tool.RotateChip;
-            CheckBoxSolderTool.Checked = false;
-            CheckBoxEraseSolderTool.Checked = false;
-            CheckBoxWireTool.Checked = false;
-            CheckBoxEraseWireTool.Checked = false;
-            CheckBoxChipTool.Checked = false;
-            CheckBoxRotateChipTool.Checked = true;
             CheckBoxEraseChipTool.Checked = false;
             GridContainer.ResetSuggestions();
         }
@@ -286,7 +267,6 @@ namespace PERF_Design
             CheckBoxWireTool.Checked = false;
             CheckBoxEraseWireTool.Checked = false;
             CheckBoxChipTool.Checked = false;
-            CheckBoxRotateChipTool.Checked = false;
             CheckBoxEraseChipTool.Checked = true;
             GridContainer.ResetSuggestions();
         }
@@ -318,6 +298,30 @@ namespace PERF_Design
             ButtonUndoAction.Enabled = false;
             Saved = true;
             UpdateOpenFile();
+        }
+
+        public Orientation RetrieveOrientation()
+        {
+            if (RadioButtonUp.Checked)
+            {
+                return Orientation.Up;
+            }
+            else if (RadioButtonRight.Checked)
+            {
+                return Orientation.Right;
+            }
+            else if (RadioButtonDown.Checked)
+            {
+                return Orientation.Down;
+            }
+            else if (RadioButtonLeft.Checked)
+            {
+                return Orientation.Left;
+            }
+            else
+            {
+                return Orientation.Up;
+            }
         }
 
         private void PanelColorPicker_Click(object sender, EventArgs e)
@@ -757,7 +761,7 @@ namespace PERF_Design
 
                                     BoardObject newChip = new BoardObject();
                                     newChip.ObjectType = ObjectType.Chip;
-
+                                    
                                     if (tempHole1.Position.X <= tempHole2.Position.X && tempHole1.Position.Y <= tempHole2.Position.Y)
                                     {
                                         newChip.Hole1Y = tempHole1.Position.Y;
@@ -791,14 +795,7 @@ namespace PERF_Design
                                         return; // should never be here
                                     }
 
-                                    if (newChip.Hole2X - newChip.Hole1X <= newChip.Hole2Y - newChip.Hole1Y)
-                                    {
-                                        newChip.Orientation = Orientation.Up;
-                                    }
-                                    else
-                                    {
-                                        newChip.Orientation = Orientation.Right;
-                                    }
+                                    newChip.Orientation = FormParent.RetrieveOrientation();
 
 
                                     // check if overlap other chips
@@ -866,31 +863,6 @@ namespace PERF_Design
                                 SuggestedBoardObject.Hole1Y = hole.Position.Y;
                                 SuggestedBoardObject.Hole1X = hole.Position.X;
                                 hole.Redraw();
-                            }
-                        }
-                        break;
-                    case Tool.RotateChip:
-                        {
-                            BoardObject chipUnderMouse = FindChipOverHole(hole);
-                            if (chipUnderMouse != null)
-                            {
-                                switch (chipUnderMouse.Orientation)
-                                {
-                                    case Orientation.Up:
-                                        chipUnderMouse.Orientation = Orientation.Right;
-                                        break;
-                                    case Orientation.Right:
-                                        chipUnderMouse.Orientation = Orientation.Down;
-                                        break;
-                                    case Orientation.Down:
-                                        chipUnderMouse.Orientation = Orientation.Left;
-                                        break;
-                                    case Orientation.Left:
-                                        chipUnderMouse.Orientation = Orientation.Up;
-                                        break;
-                                }
-                                ChangeMade(new Action(chipUnderMouse, ObjectType.Chip, ActionType.Rotating));
-                                chipUnderMouse.Refresh(Grid);
                             }
                         }
                         break;
@@ -1029,26 +1001,6 @@ namespace PERF_Design
                                 case ActionType.Placing:
                                     {
                                         BoardObjects.Remove(lastAction.Object);
-                                        lastAction.Object.Refresh(Grid);
-                                        break;
-                                    }
-                                case ActionType.Rotating:
-                                    {
-                                        switch (lastAction.Object.Orientation)
-                                        {
-                                            case Orientation.Up:
-                                                lastAction.Object.Orientation = Orientation.Left;
-                                                break;
-                                            case Orientation.Right:
-                                                lastAction.Object.Orientation = Orientation.Up;
-                                                break;
-                                            case Orientation.Down:
-                                                lastAction.Object.Orientation = Orientation.Right;
-                                                break;
-                                            case Orientation.Left:
-                                                lastAction.Object.Orientation = Orientation.Down;
-                                                break;
-                                        }
                                         lastAction.Object.Refresh(Grid);
                                         break;
                                     }
@@ -1429,7 +1381,6 @@ namespace PERF_Design
     {
         Placing,
         Erasing,
-        Rotating,
     }
 
     public enum ConnectionState
@@ -1454,7 +1405,6 @@ namespace PERF_Design
         Wire,
         EraseWire,
         Chip,
-        RotateChip,
         EraseChip,
     }
 

@@ -30,6 +30,10 @@
         {
             this.PanelGridContainer = new System.Windows.Forms.Panel();
             this.PanelControlPanel = new System.Windows.Forms.Panel();
+            this.RadioButtonDown = new System.Windows.Forms.RadioButton();
+            this.RadioButtonLeft = new System.Windows.Forms.RadioButton();
+            this.RadioButtonRight = new System.Windows.Forms.RadioButton();
+            this.RadioButtonUp = new System.Windows.Forms.RadioButton();
             this.ButtonUndoAction = new System.Windows.Forms.Button();
             this.PanelColorPicker = new System.Windows.Forms.Panel();
             this.ButtonSave = new System.Windows.Forms.Button();
@@ -37,7 +41,6 @@
             this.CheckBoxEraseWireTool = new System.Windows.Forms.CheckBox();
             this.CheckBoxWireTool = new System.Windows.Forms.CheckBox();
             this.ButtonCancelPlacing = new System.Windows.Forms.Button();
-            this.CheckBoxRotateChipTool = new System.Windows.Forms.CheckBox();
             this.ButtonLoad = new System.Windows.Forms.Button();
             this.ButtonSaveAs = new System.Windows.Forms.Button();
             this.CheckBoxEraseChipTool = new System.Windows.Forms.CheckBox();
@@ -61,6 +64,10 @@
             // PanelControlPanel
             // 
             this.PanelControlPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.PanelControlPanel.Controls.Add(this.RadioButtonDown);
+            this.PanelControlPanel.Controls.Add(this.RadioButtonLeft);
+            this.PanelControlPanel.Controls.Add(this.RadioButtonRight);
+            this.PanelControlPanel.Controls.Add(this.RadioButtonUp);
             this.PanelControlPanel.Controls.Add(this.ButtonUndoAction);
             this.PanelControlPanel.Controls.Add(this.PanelColorPicker);
             this.PanelControlPanel.Controls.Add(this.ButtonSave);
@@ -68,21 +75,61 @@
             this.PanelControlPanel.Controls.Add(this.CheckBoxEraseWireTool);
             this.PanelControlPanel.Controls.Add(this.CheckBoxWireTool);
             this.PanelControlPanel.Controls.Add(this.ButtonCancelPlacing);
-            this.PanelControlPanel.Controls.Add(this.CheckBoxRotateChipTool);
             this.PanelControlPanel.Controls.Add(this.ButtonLoad);
             this.PanelControlPanel.Controls.Add(this.ButtonSaveAs);
             this.PanelControlPanel.Controls.Add(this.CheckBoxEraseChipTool);
             this.PanelControlPanel.Controls.Add(this.CheckBoxChipTool);
             this.PanelControlPanel.Controls.Add(this.CheckBoxEraseSolderTool);
             this.PanelControlPanel.Controls.Add(this.CheckBoxSolderTool);
-            this.PanelControlPanel.Location = new System.Drawing.Point(-1, -1);
+            this.PanelControlPanel.Location = new System.Drawing.Point(0, -1);
             this.PanelControlPanel.Name = "PanelControlPanel";
-            this.PanelControlPanel.Size = new System.Drawing.Size(1217, 48);
+            this.PanelControlPanel.Size = new System.Drawing.Size(1178, 48);
             this.PanelControlPanel.TabIndex = 6;
+            // 
+            // RadioButtonDown
+            // 
+            this.RadioButtonDown.AutoSize = true;
+            this.RadioButtonDown.Location = new System.Drawing.Point(486, 29);
+            this.RadioButtonDown.Name = "RadioButtonDown";
+            this.RadioButtonDown.Size = new System.Drawing.Size(14, 13);
+            this.RadioButtonDown.TabIndex = 25;
+            this.RadioButtonDown.TabStop = true;
+            this.RadioButtonDown.UseVisualStyleBackColor = true;
+            // 
+            // RadioButtonLeft
+            // 
+            this.RadioButtonLeft.AutoSize = true;
+            this.RadioButtonLeft.Location = new System.Drawing.Point(474, 17);
+            this.RadioButtonLeft.Name = "RadioButtonLeft";
+            this.RadioButtonLeft.Size = new System.Drawing.Size(14, 13);
+            this.RadioButtonLeft.TabIndex = 24;
+            this.RadioButtonLeft.TabStop = true;
+            this.RadioButtonLeft.UseVisualStyleBackColor = true;
+            // 
+            // RadioButtonRight
+            // 
+            this.RadioButtonRight.AutoSize = true;
+            this.RadioButtonRight.Location = new System.Drawing.Point(498, 17);
+            this.RadioButtonRight.Name = "RadioButtonRight";
+            this.RadioButtonRight.Size = new System.Drawing.Size(14, 13);
+            this.RadioButtonRight.TabIndex = 23;
+            this.RadioButtonRight.TabStop = true;
+            this.RadioButtonRight.UseVisualStyleBackColor = true;
+            // 
+            // RadioButtonUp
+            // 
+            this.RadioButtonUp.AutoSize = true;
+            this.RadioButtonUp.Checked = true;
+            this.RadioButtonUp.Location = new System.Drawing.Point(486, 5);
+            this.RadioButtonUp.Name = "RadioButtonUp";
+            this.RadioButtonUp.Size = new System.Drawing.Size(14, 13);
+            this.RadioButtonUp.TabIndex = 22;
+            this.RadioButtonUp.TabStop = true;
+            this.RadioButtonUp.UseVisualStyleBackColor = true;
             // 
             // ButtonUndoAction
             // 
-            this.ButtonUndoAction.Location = new System.Drawing.Point(736, 12);
+            this.ButtonUndoAction.Location = new System.Drawing.Point(692, 12);
             this.ButtonUndoAction.Name = "ButtonUndoAction";
             this.ButtonUndoAction.Size = new System.Drawing.Size(81, 24);
             this.ButtonUndoAction.TabIndex = 21;
@@ -102,7 +149,7 @@
             // 
             // ButtonSave
             // 
-            this.ButtonSave.Location = new System.Drawing.Point(947, 12);
+            this.ButtonSave.Location = new System.Drawing.Point(907, 12);
             this.ButtonSave.Name = "ButtonSave";
             this.ButtonSave.Size = new System.Drawing.Size(81, 24);
             this.ButtonSave.TabIndex = 19;
@@ -112,7 +159,7 @@
             // 
             // ButtonNewBoard
             // 
-            this.ButtonNewBoard.Location = new System.Drawing.Point(860, 12);
+            this.ButtonNewBoard.Location = new System.Drawing.Point(820, 12);
             this.ButtonNewBoard.Name = "ButtonNewBoard";
             this.ButtonNewBoard.Size = new System.Drawing.Size(81, 24);
             this.ButtonNewBoard.TabIndex = 18;
@@ -149,7 +196,7 @@
             // ButtonCancelPlacing
             // 
             this.ButtonCancelPlacing.Enabled = false;
-            this.ButtonCancelPlacing.Location = new System.Drawing.Point(649, 12);
+            this.ButtonCancelPlacing.Location = new System.Drawing.Point(605, 12);
             this.ButtonCancelPlacing.Name = "ButtonCancelPlacing";
             this.ButtonCancelPlacing.Size = new System.Drawing.Size(81, 24);
             this.ButtonCancelPlacing.TabIndex = 15;
@@ -157,22 +204,9 @@
             this.ButtonCancelPlacing.UseVisualStyleBackColor = true;
             this.ButtonCancelPlacing.Click += new System.EventHandler(this.ButtonCancelPlacing_Click);
             // 
-            // CheckBoxRotateChipTool
-            // 
-            this.CheckBoxRotateChipTool.Appearance = System.Windows.Forms.Appearance.Button;
-            this.CheckBoxRotateChipTool.AutoCheck = false;
-            this.CheckBoxRotateChipTool.Location = new System.Drawing.Point(475, 12);
-            this.CheckBoxRotateChipTool.Name = "CheckBoxRotateChipTool";
-            this.CheckBoxRotateChipTool.Size = new System.Drawing.Size(81, 24);
-            this.CheckBoxRotateChipTool.TabIndex = 14;
-            this.CheckBoxRotateChipTool.Text = "Rotate Chip";
-            this.CheckBoxRotateChipTool.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.CheckBoxRotateChipTool.UseVisualStyleBackColor = true;
-            this.CheckBoxRotateChipTool.Click += new System.EventHandler(this.CheckBoxRotateChipTool_Click);
-            // 
             // ButtonLoad
             // 
-            this.ButtonLoad.Location = new System.Drawing.Point(1121, 12);
+            this.ButtonLoad.Location = new System.Drawing.Point(1081, 12);
             this.ButtonLoad.Name = "ButtonLoad";
             this.ButtonLoad.Size = new System.Drawing.Size(81, 24);
             this.ButtonLoad.TabIndex = 13;
@@ -182,7 +216,7 @@
             // 
             // ButtonSaveAs
             // 
-            this.ButtonSaveAs.Location = new System.Drawing.Point(1034, 12);
+            this.ButtonSaveAs.Location = new System.Drawing.Point(994, 12);
             this.ButtonSaveAs.Name = "ButtonSaveAs";
             this.ButtonSaveAs.Size = new System.Drawing.Size(81, 24);
             this.ButtonSaveAs.TabIndex = 12;
@@ -194,7 +228,7 @@
             // 
             this.CheckBoxEraseChipTool.Appearance = System.Windows.Forms.Appearance.Button;
             this.CheckBoxEraseChipTool.AutoCheck = false;
-            this.CheckBoxEraseChipTool.Location = new System.Drawing.Point(562, 12);
+            this.CheckBoxEraseChipTool.Location = new System.Drawing.Point(518, 12);
             this.CheckBoxEraseChipTool.Name = "CheckBoxEraseChipTool";
             this.CheckBoxEraseChipTool.Size = new System.Drawing.Size(81, 24);
             this.CheckBoxEraseChipTool.TabIndex = 10;
@@ -270,6 +304,7 @@
             this.Scroll += new System.Windows.Forms.ScrollEventHandler(this.MainForm_Scroll);
             this.MouseWheel += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseWheel);
             this.PanelControlPanel.ResumeLayout(false);
+            this.PanelControlPanel.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -285,7 +320,6 @@
         private System.Windows.Forms.Button ButtonSaveAs;
         private System.Windows.Forms.Button ButtonLoad;
         private System.Windows.Forms.SaveFileDialog SaveFileDialog;
-        private System.Windows.Forms.CheckBox CheckBoxRotateChipTool;
         private System.Windows.Forms.Button ButtonCancelPlacing;
         private System.Windows.Forms.CheckBox CheckBoxEraseWireTool;
         private System.Windows.Forms.CheckBox CheckBoxWireTool;
@@ -295,6 +329,10 @@
         private System.Windows.Forms.Panel PanelColorPicker;
         private System.Windows.Forms.ColorDialog ColorDialog;
         private System.Windows.Forms.Button ButtonUndoAction;
+        private System.Windows.Forms.RadioButton RadioButtonDown;
+        private System.Windows.Forms.RadioButton RadioButtonLeft;
+        private System.Windows.Forms.RadioButton RadioButtonRight;
+        private System.Windows.Forms.RadioButton RadioButtonUp;
     }
 }
 
