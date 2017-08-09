@@ -30,6 +30,7 @@
         {
             this.PanelGridContainer = new System.Windows.Forms.Panel();
             this.PanelControlPanel = new System.Windows.Forms.Panel();
+            this.PanelColorPicker = new System.Windows.Forms.Panel();
             this.ButtonSave = new System.Windows.Forms.Button();
             this.ButtonNewBoard = new System.Windows.Forms.Button();
             this.CheckBoxEraseWireTool = new System.Windows.Forms.CheckBox();
@@ -44,6 +45,7 @@
             this.CheckBoxSolderTool = new System.Windows.Forms.CheckBox();
             this.SaveFileDialog = new System.Windows.Forms.SaveFileDialog();
             this.OpenFileDialog = new System.Windows.Forms.OpenFileDialog();
+            this.ColorDialog = new System.Windows.Forms.ColorDialog();
             this.PanelControlPanel.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -58,6 +60,7 @@
             // PanelControlPanel
             // 
             this.PanelControlPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.PanelControlPanel.Controls.Add(this.PanelColorPicker);
             this.PanelControlPanel.Controls.Add(this.ButtonSave);
             this.PanelControlPanel.Controls.Add(this.ButtonNewBoard);
             this.PanelControlPanel.Controls.Add(this.CheckBoxEraseWireTool);
@@ -74,6 +77,16 @@
             this.PanelControlPanel.Name = "PanelControlPanel";
             this.PanelControlPanel.Size = new System.Drawing.Size(1125, 48);
             this.PanelControlPanel.TabIndex = 6;
+            // 
+            // PanelColorPicker
+            // 
+            this.PanelColorPicker.BackColor = System.Drawing.SystemColors.Control;
+            this.PanelColorPicker.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.PanelColorPicker.Location = new System.Drawing.Point(273, 13);
+            this.PanelColorPicker.Name = "PanelColorPicker";
+            this.PanelColorPicker.Size = new System.Drawing.Size(22, 22);
+            this.PanelColorPicker.TabIndex = 20;
+            this.PanelColorPicker.Click += new System.EventHandler(this.PanelColorPicker_Click);
             // 
             // ButtonSave
             // 
@@ -99,7 +112,7 @@
             // 
             this.CheckBoxEraseWireTool.Appearance = System.Windows.Forms.Appearance.Button;
             this.CheckBoxEraseWireTool.AutoCheck = false;
-            this.CheckBoxEraseWireTool.Location = new System.Drawing.Point(273, 12);
+            this.CheckBoxEraseWireTool.Location = new System.Drawing.Point(301, 13);
             this.CheckBoxEraseWireTool.Name = "CheckBoxEraseWireTool";
             this.CheckBoxEraseWireTool.Size = new System.Drawing.Size(81, 24);
             this.CheckBoxEraseWireTool.TabIndex = 17;
@@ -124,7 +137,7 @@
             // ButtonCancelPlacing
             // 
             this.ButtonCancelPlacing.Enabled = false;
-            this.ButtonCancelPlacing.Location = new System.Drawing.Point(621, 12);
+            this.ButtonCancelPlacing.Location = new System.Drawing.Point(649, 12);
             this.ButtonCancelPlacing.Name = "ButtonCancelPlacing";
             this.ButtonCancelPlacing.Size = new System.Drawing.Size(81, 24);
             this.ButtonCancelPlacing.TabIndex = 15;
@@ -136,7 +149,7 @@
             // 
             this.CheckBoxRotateChipTool.Appearance = System.Windows.Forms.Appearance.Button;
             this.CheckBoxRotateChipTool.AutoCheck = false;
-            this.CheckBoxRotateChipTool.Location = new System.Drawing.Point(447, 12);
+            this.CheckBoxRotateChipTool.Location = new System.Drawing.Point(475, 12);
             this.CheckBoxRotateChipTool.Name = "CheckBoxRotateChipTool";
             this.CheckBoxRotateChipTool.Size = new System.Drawing.Size(81, 24);
             this.CheckBoxRotateChipTool.TabIndex = 14;
@@ -169,7 +182,7 @@
             // 
             this.CheckBoxEraseChipTool.Appearance = System.Windows.Forms.Appearance.Button;
             this.CheckBoxEraseChipTool.AutoCheck = false;
-            this.CheckBoxEraseChipTool.Location = new System.Drawing.Point(534, 12);
+            this.CheckBoxEraseChipTool.Location = new System.Drawing.Point(562, 12);
             this.CheckBoxEraseChipTool.Name = "CheckBoxEraseChipTool";
             this.CheckBoxEraseChipTool.Size = new System.Drawing.Size(81, 24);
             this.CheckBoxEraseChipTool.TabIndex = 10;
@@ -182,7 +195,7 @@
             // 
             this.CheckBoxChipTool.Appearance = System.Windows.Forms.Appearance.Button;
             this.CheckBoxChipTool.AutoCheck = false;
-            this.CheckBoxChipTool.Location = new System.Drawing.Point(360, 12);
+            this.CheckBoxChipTool.Location = new System.Drawing.Point(388, 12);
             this.CheckBoxChipTool.Name = "CheckBoxChipTool";
             this.CheckBoxChipTool.Size = new System.Drawing.Size(81, 24);
             this.CheckBoxChipTool.TabIndex = 9;
@@ -227,6 +240,10 @@
             this.OpenFileDialog.DefaultExt = "dat";
             this.OpenFileDialog.Filter = "Data Files (*.dat)|";
             // 
+            // ColorDialog
+            // 
+            this.ColorDialog.FullOpen = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -263,6 +280,8 @@
         private System.Windows.Forms.Button ButtonNewBoard;
         private System.Windows.Forms.OpenFileDialog OpenFileDialog;
         private System.Windows.Forms.Button ButtonSave;
+        private System.Windows.Forms.Panel PanelColorPicker;
+        private System.Windows.Forms.ColorDialog ColorDialog;
     }
 }
 

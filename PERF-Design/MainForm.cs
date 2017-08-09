@@ -26,20 +26,8 @@ namespace PERF_Design
             InitializeComponent();
             Saved = true;
             FileName = null;
-            UpdateOpenFile();
 
-            //TrackingConnectionHole = null;
-
-            Preferences.GridHeight = 50;
-            Preferences.GridWidth = 50;
-
-            PanelGridContainer.Width = (int)(Preferences.GridWidth * Preferences.GridSize);
-            PanelGridContainer.Height = (int)(Preferences.GridHeight * Preferences.GridSize);
-
-            GridContainer = new GridContainer(this);
-            GridContainer.Width = PanelGridContainer.Width;
-            GridContainer.Height = PanelGridContainer.Height;
-            PanelGridContainer.Controls.Add(GridContainer);
+            LoadNewBoard();
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -64,11 +52,27 @@ namespace PERF_Design
 
         private void LoadNewBoard(Save saveObj = null)
         {
+            UpdateOpenFile();
+
+            if (saveObj != null)
+            {
+                Preferences.GridHeight = saveObj.Height;
+                Preferences.GridWidth = saveObj.Width;
+                ColorDialog.CustomColors = saveObj.CustomColors;
+            }
+            else
+            {
+                Preferences.GridHeight = 50;
+                Preferences.GridWidth = 50;
+            }
+
+            PanelGridContainer.Controls.Clear();
+
+            PanelColorPicker.BackColor = Color.OrangeRed;
+            ColorDialog.Color = Color.OrangeRed;
             PanelGridContainer.Width = (int)(Preferences.GridWidth * Preferences.GridSize);
             PanelGridContainer.Height = (int)(Preferences.GridHeight * Preferences.GridSize);
-            
-            UpdateOpenFile();
-            PanelGridContainer.Controls.Clear();
+
             GridContainer = new GridContainer(this,saveObj);
             GridContainer.Width = PanelGridContainer.Width;
             GridContainer.Height = PanelGridContainer.Height;
@@ -122,6 +126,7 @@ namespace PERF_Design
             Save newSave = new Save();
             newSave.Width = Preferences.GridWidth;
             newSave.Height = Preferences.GridHeight;
+            newSave.CustomColors = ColorDialog.CustomColors;
             newSave.SolderConnections = GridContainer.SolderConnections;
             newSave.WireConnections = GridContainer.WireConnections;
             newSave.Chips = GridContainer.Chips;
@@ -159,9 +164,6 @@ namespace PERF_Design
             {
                 // Open the file containing the data that you want to deserialize.
                 Save oldSave = LoadSave(OpenFileDialog.FileName);
-
-                Preferences.GridWidth = oldSave.Width;
-                Preferences.GridHeight = oldSave.Height;
                 
                 LoadNewBoard(oldSave);
             }
@@ -301,6 +303,19 @@ namespace PERF_Design
             UpdateOpenFile();
         }
 
+        public Color GetWireColor()
+        {
+            return ColorDialog.Color;
+        }
+
+        private void PanelColorPicker_Click(object sender, EventArgs e)
+        {
+            if (ColorDialog.ShowDialog() == DialogResult.OK)
+            {
+                PanelColorPicker.BackColor = ColorDialog.Color;
+            }
+        }
+
         protected override System.Drawing.Point ScrollToControl(Control activeControl)
         {
             // When there's only 1 control in the panel and the user clicks
@@ -315,6 +330,7 @@ namespace PERF_Design
     {
         public int Width;
         public int Height;
+        public int[] CustomColors;
         public List<Connection> SolderConnections;
         public List<Connection> WireConnections;
         public List<Chip> Chips;
@@ -685,6 +701,7 @@ namespace PERF_Design
 
                                     if (!alreadyExists)
                                     {
+                                        newWireConnection.Color = FormParent.GetWireColor();
                                         WireConnections.Add(newWireConnection);
                                         FormParent.ChangeMade();
                                     }
@@ -1084,7 +1101,6 @@ namespace PERF_Design
 
 
             using (Pen blackPen = new Pen(Color.Black, 2))
-            using (Pen wirePen = new Pen(Color.OrangeRed, Preferences.HoleSize / 4))
             using (SolidBrush hoverBrush = new SolidBrush(Color.LawnGreen))
             using (SolidBrush pressedBrush = new SolidBrush(Color.LimeGreen))
             using (SolidBrush whiteBrush = new SolidBrush(Color.White))
@@ -1322,20 +1338,22 @@ namespace PERF_Design
 
                 foreach (Connection wireConnection in WireConnections)
                 {
-                    Point grid1 = new Point((wireConnection.Hole1X * Preferences.GridSize), (wireConnection.Hole1Y * Preferences.GridSize));
-                    Rectangle innerSquare1 = new Rectangle(new Point(grid1.X + Preferences.Offset + (Preferences.HoleSize / 5), grid1.Y + Preferences.Offset + (Preferences.HoleSize / 5)),
-                        new Size(Preferences.HoleSize - 2 * (Preferences.HoleSize / 5), Preferences.HoleSize - 2 * (Preferences.HoleSize / 5)));
-                    Point innerSquare1Centre = new Point(grid1.X + (Preferences.GridSize / 2), grid1.Y + (Preferences.GridSize / 2));
+                    using (Pen wirePen = new Pen(wireConnection.Color, Preferences.HoleSize / 4))
+                    {
+                        Point grid1 = new Point((wireConnection.Hole1X * Preferences.GridSize), (wireConnection.Hole1Y * Preferences.GridSize));
+                        Rectangle innerSquare1 = new Rectangle(new Point(grid1.X + Preferences.Offset + (Preferences.HoleSize / 5), grid1.Y + Preferences.Offset + (Preferences.HoleSize / 5)),
+                            new Size(Preferences.HoleSize - 2 * (Preferences.HoleSize / 5), Preferences.HoleSize - 2 * (Preferences.HoleSize / 5)));
+                        Point innerSquare1Centre = new Point(grid1.X + (Preferences.GridSize / 2), grid1.Y + (Preferences.GridSize / 2));
 
-                    Point grid2 = new Point((wireConnection.Hole2X * Preferences.GridSize), (wireConnection.Hole2Y * Preferences.GridSize));
-                    Rectangle innerSquare2 = new Rectangle(new Point(grid2.X + Preferences.Offset + (Preferences.HoleSize / 5), grid2.Y + Preferences.Offset + (Preferences.HoleSize / 5)),
-                        new Size(Preferences.HoleSize - 2 * (Preferences.HoleSize / 5), Preferences.HoleSize - 2 * (Preferences.HoleSize / 5)));
-                    Point innerSquare2Centre = new Point(grid2.X + (Preferences.GridSize / 2), grid2.Y + (Preferences.GridSize / 2));
+                        Point grid2 = new Point((wireConnection.Hole2X * Preferences.GridSize), (wireConnection.Hole2Y * Preferences.GridSize));
+                        Rectangle innerSquare2 = new Rectangle(new Point(grid2.X + Preferences.Offset + (Preferences.HoleSize / 5), grid2.Y + Preferences.Offset + (Preferences.HoleSize / 5)),
+                            new Size(Preferences.HoleSize - 2 * (Preferences.HoleSize / 5), Preferences.HoleSize - 2 * (Preferences.HoleSize / 5)));
+                        Point innerSquare2Centre = new Point(grid2.X + (Preferences.GridSize / 2), grid2.Y + (Preferences.GridSize / 2));
 
-                    pe.Graphics.DrawLine(wirePen, innerSquare1Centre, innerSquare2Centre);
-                    pe.Graphics.FillRectangle(solderBrush, innerSquare1);
-                    pe.Graphics.FillRectangle(solderBrush, innerSquare2);
-
+                        pe.Graphics.DrawLine(wirePen, innerSquare1Centre, innerSquare2Centre);
+                        pe.Graphics.FillRectangle(solderBrush, innerSquare1);
+                        pe.Graphics.FillRectangle(solderBrush, innerSquare2);
+                    }
                 }
             }
 
@@ -1451,6 +1469,7 @@ namespace PERF_Design
         public int Hole2X;
         public int Hole2Y;
         public ConnectionState State;
+        public Color Color;
 
         public Connection()
         {
@@ -1459,6 +1478,7 @@ namespace PERF_Design
             Hole2X = -1;
             Hole2Y = -1;
             State = ConnectionState.Suggested;
+            Color = Color.White;
         }
     }
 
