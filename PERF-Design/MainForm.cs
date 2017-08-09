@@ -1029,6 +1029,7 @@ namespace PERF_Design
 
 
             using (Pen blackPen = new Pen(Color.Black, 2))
+            using (Pen wireBlackPen = new Pen(Color.Black, 1))
             using (SolidBrush hoverBrush = new SolidBrush(Color.LawnGreen))
             using (SolidBrush pressedBrush = new SolidBrush(Color.LimeGreen))
             using (SolidBrush whiteBrush = new SolidBrush(Color.White))
@@ -1272,7 +1273,8 @@ namespace PERF_Design
                 {
                     if (wireConnection.ObjectType == ObjectType.Wire)
                     {
-                        using (Pen wirePen = new Pen(wireConnection.Color, Preferences.HoleSize / 4))
+                        float lineThickness = Preferences.HoleSize / 4;
+                        using (Pen wirePen = new Pen(wireConnection.Color, lineThickness))
                         {
                             Point grid1 = new Point((wireConnection.Hole1X * Preferences.GridSize), (wireConnection.Hole1Y * Preferences.GridSize));
                             Rectangle innerSquare1 = new Rectangle(new Point(grid1.X + Preferences.Offset + (Preferences.HoleSize / 5), grid1.Y + Preferences.Offset + (Preferences.HoleSize / 5)),
@@ -1284,9 +1286,21 @@ namespace PERF_Design
                                 new Size(Preferences.HoleSize - 2 * (Preferences.HoleSize / 5), Preferences.HoleSize - 2 * (Preferences.HoleSize / 5)));
                             Point innerSquare2Centre = new Point(grid2.X + (Preferences.GridSize / 2), grid2.Y + (Preferences.GridSize / 2));
 
+                            double theta = Math.Atan((double)(innerSquare2Centre.Y - innerSquare1Centre.Y) / (double)(innerSquare2Centre.X - innerSquare1Centre.X));
+                            int xOffset = (int)Math.Round(Math.Sin(theta) * (lineThickness/2));
+                            int yOffset = (int)Math.Round(Math.Cos(theta) * (lineThickness/2));
+                            Point grid1Wire1 = new Point(innerSquare1Centre.X + xOffset, innerSquare1Centre.Y - yOffset);
+                            Point grid2Wire1 = new Point(innerSquare2Centre.X + xOffset, innerSquare2Centre.Y - yOffset);
+                            Point grid1Wire2 = new Point(innerSquare1Centre.X - xOffset, innerSquare1Centre.Y + yOffset);
+                            Point grid2Wire2 = new Point(innerSquare2Centre.X - xOffset, innerSquare2Centre.Y + yOffset);
+
                             pe.Graphics.DrawLine(wirePen, innerSquare1Centre, innerSquare2Centre);
+                            pe.Graphics.DrawLine(wireBlackPen, grid1Wire1, grid2Wire1);
+                            pe.Graphics.DrawLine(wireBlackPen, grid1Wire2, grid2Wire2);
                             pe.Graphics.FillRectangle(solderBrush, innerSquare1);
+                            pe.Graphics.DrawRectangle(wireBlackPen, innerSquare1);
                             pe.Graphics.FillRectangle(solderBrush, innerSquare2);
+                            pe.Graphics.DrawRectangle(wireBlackPen, innerSquare2);
                         }
                     }
                 }
