@@ -27,12 +27,11 @@ namespace PERF_Design
             Saved = true;
             FileName = null;
 
-            LoadNewBoard();
         }
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            CheckBoxSolderTool.Checked = true;
+            LoadNewBoard();
         }
 
         private void MainForm_MouseWheel(object sender, MouseEventArgs e)
@@ -48,6 +47,11 @@ namespace PERF_Design
         private void ButtonCancelPlacing_Click(object sender, EventArgs e)
         {
             GridContainer.ResetSuggestions();
+        }
+
+        private void ButtonUndoAction_Click(object sender, EventArgs e)
+        {
+            GridContainer.UndoAction();
         }
 
         private void LoadNewBoard(Save saveObj = null)
@@ -73,7 +77,8 @@ namespace PERF_Design
             PanelGridContainer.Width = (int)(Preferences.GridWidth * Preferences.GridSize);
             PanelGridContainer.Height = (int)(Preferences.GridHeight * Preferences.GridSize);
 
-            GridContainer = new GridContainer(this,saveObj);
+            GridContainer = new GridContainer(this, saveObj);
+            CheckBoxSolderTool_Click(null, null);
             GridContainer.Width = PanelGridContainer.Width;
             GridContainer.Height = PanelGridContainer.Height;
             PanelGridContainer.Controls.Add(GridContainer);
@@ -81,6 +86,7 @@ namespace PERF_Design
 
         private void ButtonNewBoard_Click(object sender, EventArgs e)
         {
+            Saved = true;
             FileName = null;
             LoadNewBoard();
         }
@@ -127,9 +133,7 @@ namespace PERF_Design
             newSave.Width = Preferences.GridWidth;
             newSave.Height = Preferences.GridHeight;
             newSave.CustomColors = ColorDialog.CustomColors;
-            newSave.SolderConnections = GridContainer.SolderConnections;
-            newSave.WireConnections = GridContainer.WireConnections;
-            newSave.Chips = GridContainer.Chips;
+            newSave.BoardObjects = GridContainer.BoardObjects;
             SaveFileDialog.FileName = "";
 
             // To serialize the hashtable and its key/value pairs,  
@@ -164,7 +168,7 @@ namespace PERF_Design
             {
                 // Open the file containing the data that you want to deserialize.
                 Save oldSave = LoadSave(OpenFileDialog.FileName);
-                
+
                 LoadNewBoard(oldSave);
             }
         }
@@ -299,6 +303,7 @@ namespace PERF_Design
 
         public void ChangeMade()
         {
+            ButtonUndoAction.Enabled = true;
             Saved = false;
             UpdateOpenFile();
         }
@@ -306,6 +311,13 @@ namespace PERF_Design
         public Color GetWireColor()
         {
             return ColorDialog.Color;
+        }
+
+        public void ActionsEmpty()
+        {
+            ButtonUndoAction.Enabled = false;
+            Saved = true;
+            UpdateOpenFile();
         }
 
         private void PanelColorPicker_Click(object sender, EventArgs e)
@@ -331,9 +343,7 @@ namespace PERF_Design
         public int Width;
         public int Height;
         public int[] CustomColors;
-        public List<Connection> SolderConnections;
-        public List<Connection> WireConnections;
-        public List<Chip> Chips;
+        public List<BoardObject> BoardObjects;
     }
 
     public class GridContainer : UserControl
@@ -344,12 +354,9 @@ namespace PERF_Design
 
         public Hole HoveredHole;
 
-        public List<Connection> SolderConnections;
-        public Connection SuggestedSolderConnection;
-        public List<Connection> WireConnections;
-        public Connection SuggestedWireConnection;
-        public List<Chip> Chips;
-        public Chip SuggestedChip;
+        public List<Action> Actions;
+        public List<BoardObject> BoardObjects;
+        public BoardObject SuggestedBoardObject;
         public bool MousePressed;
 
         public GridContainer(MainForm parentForm, Save saveFile = null)
@@ -362,30 +369,18 @@ namespace PERF_Design
             this.MouseUp += GridContainer_MouseUp;
             this.MouseLeave += GridContainer_MouseLeave;
 
-            SolderConnections = new List<Connection>();
-            WireConnections = new List<Connection>();
-            Chips = new List<Chip>();
+            Actions = new List<Action>();
+            parentForm.ActionsEmpty();
+            BoardObjects = new List<BoardObject>();
             if (saveFile != null)
             {
-                if (saveFile.SolderConnections != null)
+                if (saveFile.BoardObjects != null)
                 {
-                    SolderConnections = saveFile.SolderConnections;
-                }
-
-                if (saveFile.WireConnections != null)
-                {
-                    WireConnections = saveFile.WireConnections;
-                }
-
-                if (saveFile.Chips != null)
-                {
-                    Chips = saveFile.Chips;
+                    BoardObjects = saveFile.BoardObjects;
                 }
             }
 
-            SuggestedSolderConnection = new Connection();
-            SuggestedWireConnection = new Connection();
-            SuggestedChip = new Chip();
+            SuggestedBoardObject = new BoardObject();
             this.Cursor = Cursors.Hand;
             HoveredHole = null;
 
@@ -447,56 +442,16 @@ namespace PERF_Design
         public void ResetSuggestions()
         {
             Hole tempHole1 = null;
-            if (SuggestedSolderConnection.Hole1Y != -1)
+            if (SuggestedBoardObject.Hole1Y != -1)
             {
-                tempHole1 = Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X];
+                tempHole1 = Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X];
             }
             Hole tempHole2 = null;
-            if (SuggestedSolderConnection.Hole2Y != -1)
+            if (SuggestedBoardObject.Hole2Y != -1)
             {
-                tempHole2 = Grid[SuggestedSolderConnection.Hole2Y][SuggestedSolderConnection.Hole2X];
+                tempHole2 = Grid[SuggestedBoardObject.Hole2Y][SuggestedBoardObject.Hole2X];
             }
-            SuggestedSolderConnection = new Connection();
-            if (tempHole1 != null)
-            {
-                tempHole1.Redraw();
-            }
-            if (tempHole2 != null)
-            {
-                tempHole2.Redraw();
-            }
-
-            tempHole1 = null;
-            if (SuggestedWireConnection.Hole1Y != -1)
-            {
-                tempHole1 = Grid[SuggestedWireConnection.Hole1Y][SuggestedWireConnection.Hole1X];
-            }
-            tempHole2 = null;
-            if (SuggestedWireConnection.Hole2Y != -1)
-            {
-                tempHole2 = Grid[SuggestedWireConnection.Hole2Y][SuggestedWireConnection.Hole2X];
-            }
-            SuggestedWireConnection = new Connection();
-            if (tempHole1 != null)
-            {
-                tempHole1.Redraw();
-            }
-            if (tempHole2 != null)
-            {
-                tempHole2.Redraw();
-            }
-
-            tempHole1 = null;
-            if (SuggestedChip.TopLeftHoleY != -1)
-            {
-                tempHole1 = Grid[SuggestedChip.TopLeftHoleY][SuggestedChip.TopLeftHoleX];
-            }
-            tempHole2 = null;
-            if (SuggestedChip.BottomRightHoleY != -1)
-            {
-                tempHole2 = Grid[SuggestedChip.BottomRightHoleY][SuggestedChip.BottomRightHoleX];
-            }
-            SuggestedChip = new Chip();
+            SuggestedBoardObject = new BoardObject();
             if (tempHole1 != null)
             {
                 tempHole1.Redraw();
@@ -511,11 +466,11 @@ namespace PERF_Design
 
         public void HoleHovered(Hole hole)
         {
-            if ((SelectedTool == Tool.Solder || SelectedTool == Tool.EraseSolder) && SuggestedSolderConnection.Hole1Y != -1 && Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X] != hole)
+            if ((SelectedTool == Tool.Solder || SelectedTool == Tool.EraseSolder) && SuggestedBoardObject.Hole1Y != -1 && Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X] != hole)
             {
                 //hole.Invalidate();
                 Point relativePosition = this.PointToClient(Cursor.Position);
-                Point adjustedRelativePosition = new Point(relativePosition.X - (Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X].Location.X) - (Preferences.GridSize / 2), relativePosition.Y - (Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X].Location.Y) - (Preferences.GridSize / 2));
+                Point adjustedRelativePosition = new Point(relativePosition.X - (Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X].Location.X) - (Preferences.GridSize / 2), relativePosition.Y - (Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X].Location.Y) - (Preferences.GridSize / 2));
                 int x = adjustedRelativePosition.X;
                 int y = adjustedRelativePosition.Y;
                 if (x == 0 && y == 0)
@@ -524,44 +479,43 @@ namespace PERF_Design
                 }
                 else
                 {
-                    if (SuggestedSolderConnection.Hole2Y != -1)
+                    if (SuggestedBoardObject.Hole2Y != -1)
                     {
-                        Hole tempHole = Grid[SuggestedSolderConnection.Hole2Y][SuggestedSolderConnection.Hole2X];
-                        SuggestedSolderConnection.Hole2Y = -1;
-                        SuggestedSolderConnection.Hole2X = -1;
+                        Hole tempHole = Grid[SuggestedBoardObject.Hole2Y][SuggestedBoardObject.Hole2X];
+                        SuggestedBoardObject.Hole2Y = -1;
+                        SuggestedBoardObject.Hole2X = -1;
                         tempHole.Redraw();
-
                     }
                     if (((x <= 0) && (y >= 0) && (y > -x)) || ((x >= 0) && (y >= 0) && (y > x)))
                     {
                         // down
-                        SuggestedSolderConnection.Hole2Y = Grid[SuggestedSolderConnection.Hole1Y + 1][SuggestedSolderConnection.Hole1X].Position.Y;
-                        SuggestedSolderConnection.Hole2X = Grid[SuggestedSolderConnection.Hole1Y + 1][SuggestedSolderConnection.Hole1X].Position.X;
+                        SuggestedBoardObject.Hole2Y = SuggestedBoardObject.Hole1Y + 1;
+                        SuggestedBoardObject.Hole2X = SuggestedBoardObject.Hole1X;
                     }
                     else if (((x >= 0) && (y >= 0) && (x > y)) || ((x >= 0) && (y <= 0) && (x > -y)))
                     {
                         // right
-                        SuggestedSolderConnection.Hole2Y = Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X + 1].Position.Y;
-                        SuggestedSolderConnection.Hole2X = Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X + 1].Position.X;
+                        SuggestedBoardObject.Hole2Y = SuggestedBoardObject.Hole1Y;
+                        SuggestedBoardObject.Hole2X = SuggestedBoardObject.Hole1X + 1;
                     }
                     else if (((x >= 0) && (y <= 0) && (-y > x)) || ((x <= 0) && (y <= 0) && (-y > -x)))
                     {
                         // up
-                        SuggestedSolderConnection.Hole2Y = Grid[SuggestedSolderConnection.Hole1Y - 1][SuggestedSolderConnection.Hole1X].Position.Y;
-                        SuggestedSolderConnection.Hole2X = Grid[SuggestedSolderConnection.Hole1Y - 1][SuggestedSolderConnection.Hole1X].Position.X;
+                        SuggestedBoardObject.Hole2Y = SuggestedBoardObject.Hole1Y - 1;
+                        SuggestedBoardObject.Hole2X = SuggestedBoardObject.Hole1X;
                     }
                     else if (((x <= 0) && (y <= 0) && (-x > -y)) || ((x <= 0) && (y >= 0) && (-x > y)))
                     {
                         // left
-                        SuggestedSolderConnection.Hole2Y = Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X - 1].Position.Y;
-                        SuggestedSolderConnection.Hole2X = Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X - 1].Position.X;
+                        SuggestedBoardObject.Hole2Y = SuggestedBoardObject.Hole1Y;
+                        SuggestedBoardObject.Hole2X = SuggestedBoardObject.Hole1X - 1;
                     }
                     else
                     {
                         return;
                     }
-                    Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X].Redraw();
-                    Grid[SuggestedSolderConnection.Hole2Y][SuggestedSolderConnection.Hole2X].Redraw();
+                    Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X].Redraw();
+                    Grid[SuggestedBoardObject.Hole2Y][SuggestedBoardObject.Hole2X].Redraw();
                 }
             }
 
@@ -577,49 +531,51 @@ namespace PERF_Design
                         {
                             if (!IsHoleCompletelyInsideChip(hole))
                             {
-                                if (SuggestedSolderConnection.Hole1Y != -1)
+                                if (SuggestedBoardObject.Hole1Y != -1)
                                 {
-                                    if (SuggestedSolderConnection.Hole2Y != -1 && hole == Grid[SuggestedSolderConnection.Hole2Y][SuggestedSolderConnection.Hole2X])
+                                    if (SuggestedBoardObject.Hole2Y != -1 && hole == Grid[SuggestedBoardObject.Hole2Y][SuggestedBoardObject.Hole2X])
                                     {
                                         // make solder connection
 
-                                        Connection newSolderConnection = new Connection();
-                                        newSolderConnection.Hole1Y = SuggestedSolderConnection.Hole1Y;
-                                        newSolderConnection.Hole1X = SuggestedSolderConnection.Hole1X;
-                                        newSolderConnection.Hole2Y = SuggestedSolderConnection.Hole2Y;
-                                        newSolderConnection.Hole2X = SuggestedSolderConnection.Hole2X;
+                                        BoardObject newSolderConnection = new BoardObject();
+                                        newSolderConnection.Hole1Y = SuggestedBoardObject.Hole1Y;
+                                        newSolderConnection.Hole1X = SuggestedBoardObject.Hole1X;
+                                        newSolderConnection.Hole2Y = SuggestedBoardObject.Hole2Y;
+                                        newSolderConnection.Hole2X = SuggestedBoardObject.Hole2X;
                                         newSolderConnection.State = ConnectionState.Placed;
+                                        newSolderConnection.ObjectType = ObjectType.Solder;
 
                                         bool alreadyExists = false;
-                                        foreach (Connection solderConnection in SolderConnections)
+                                        foreach (BoardObject solderConnection in BoardObjects)
                                         {
-                                            if ((Grid[solderConnection.Hole1Y][solderConnection.Hole1X] == Grid[newSolderConnection.Hole1Y][newSolderConnection.Hole1X] && Grid[solderConnection.Hole2Y][solderConnection.Hole2X] == Grid[newSolderConnection.Hole2Y][newSolderConnection.Hole2X])
-                                                || (Grid[solderConnection.Hole1Y][solderConnection.Hole1X] == Grid[newSolderConnection.Hole2Y][newSolderConnection.Hole2X] && Grid[solderConnection.Hole2Y][solderConnection.Hole2X] == Grid[newSolderConnection.Hole1Y][newSolderConnection.Hole1X]))
+                                            if (solderConnection.ObjectType == ObjectType.Solder)
                                             {
-                                                // connection already exists
-                                                alreadyExists = true;
-                                                break;
+                                                if ((Grid[solderConnection.Hole1Y][solderConnection.Hole1X] == Grid[newSolderConnection.Hole1Y][newSolderConnection.Hole1X] && Grid[solderConnection.Hole2Y][solderConnection.Hole2X] == Grid[newSolderConnection.Hole2Y][newSolderConnection.Hole2X])
+                                                    || (Grid[solderConnection.Hole1Y][solderConnection.Hole1X] == Grid[newSolderConnection.Hole2Y][newSolderConnection.Hole2X] && Grid[solderConnection.Hole2Y][solderConnection.Hole2X] == Grid[newSolderConnection.Hole1Y][newSolderConnection.Hole1X]))
+                                                {
+                                                    // connection already exists
+                                                    alreadyExists = true;
+                                                    break;
+                                                }
                                             }
                                         }
 
                                         if (!alreadyExists)
                                         {
-                                            SolderConnections.Add(newSolderConnection);
-                                            FormParent.ChangeMade();
+                                            BoardObjects.Add(newSolderConnection);
+                                            ChangeMade(new Action(newSolderConnection, ObjectType.Solder, ActionType.Placing));
                                         }
+                                        newSolderConnection.Refresh(Grid);
 
-                                        Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X].Redraw();
-                                        Grid[SuggestedSolderConnection.Hole2Y][SuggestedSolderConnection.Hole2X].Redraw();
-
-                                        SuggestedSolderConnection = new Connection();
+                                        SuggestedBoardObject = new BoardObject();
                                         FormParent.PlacingFinished();
                                     }
                                 }
                                 else
                                 {
                                     FormParent.PlacingStarted();
-                                    SuggestedSolderConnection.Hole1Y = hole.Position.Y;
-                                    SuggestedSolderConnection.Hole1X = hole.Position.X;
+                                    SuggestedBoardObject.Hole1Y = hole.Position.Y;
+                                    SuggestedBoardObject.Hole1X = hole.Position.X;
                                 }
                             }
                         }
@@ -628,46 +584,49 @@ namespace PERF_Design
                         {
                             if (!IsHoleCompletelyInsideChip(hole))
                             {
-                                if (SuggestedSolderConnection.Hole1Y != -1)
+                                if (SuggestedBoardObject.Hole1Y != -1)
                                 {
-                                    if (SuggestedSolderConnection.Hole2Y != -1 && hole == Grid[SuggestedSolderConnection.Hole2Y][SuggestedSolderConnection.Hole2X])
+                                    if (SuggestedBoardObject.Hole2Y != -1 && hole == Grid[SuggestedBoardObject.Hole2Y][SuggestedBoardObject.Hole2X])
                                     {
                                         // delete solder connection
-                                        Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X].Redraw();
-                                        Grid[SuggestedSolderConnection.Hole2Y][SuggestedSolderConnection.Hole2X].Redraw();
 
-                                        Connection tempSolderConnection = new Connection();
-                                        tempSolderConnection.Hole1Y = SuggestedSolderConnection.Hole1Y;
-                                        tempSolderConnection.Hole1X = SuggestedSolderConnection.Hole1X;
-                                        tempSolderConnection.Hole2Y = SuggestedSolderConnection.Hole2Y;
-                                        tempSolderConnection.Hole2X = SuggestedSolderConnection.Hole2X;
+                                        BoardObject tempSolderConnection = new BoardObject();
+                                        tempSolderConnection.Hole1Y = SuggestedBoardObject.Hole1Y;
+                                        tempSolderConnection.Hole1X = SuggestedBoardObject.Hole1X;
+                                        tempSolderConnection.Hole2Y = SuggestedBoardObject.Hole2Y;
+                                        tempSolderConnection.Hole2X = SuggestedBoardObject.Hole2X;
 
-                                        Connection exists = null;
-                                        foreach (Connection solderConnection in SolderConnections)
+                                        BoardObject exists = null;
+                                        foreach (BoardObject solderConnection in BoardObjects)
                                         {
-                                            if ((Grid[solderConnection.Hole1Y][solderConnection.Hole1X] == Grid[tempSolderConnection.Hole1Y][tempSolderConnection.Hole1X] && Grid[solderConnection.Hole2Y][solderConnection.Hole2X] == Grid[tempSolderConnection.Hole2Y][tempSolderConnection.Hole2X])
-                                                || (Grid[solderConnection.Hole1Y][solderConnection.Hole1X] == Grid[tempSolderConnection.Hole2Y][tempSolderConnection.Hole2X] && Grid[solderConnection.Hole2Y][solderConnection.Hole2X] == Grid[tempSolderConnection.Hole1Y][tempSolderConnection.Hole1X]))
+                                            if (solderConnection.ObjectType == ObjectType.Solder)
                                             {
-                                                // connection exists
-                                                exists = solderConnection;
-                                                break;
+                                                if ((Grid[solderConnection.Hole1Y][solderConnection.Hole1X] == Grid[tempSolderConnection.Hole1Y][tempSolderConnection.Hole1X] && Grid[solderConnection.Hole2Y][solderConnection.Hole2X] == Grid[tempSolderConnection.Hole2Y][tempSolderConnection.Hole2X])
+                                                    || (Grid[solderConnection.Hole1Y][solderConnection.Hole1X] == Grid[tempSolderConnection.Hole2Y][tempSolderConnection.Hole2X] && Grid[solderConnection.Hole2Y][solderConnection.Hole2X] == Grid[tempSolderConnection.Hole1Y][tempSolderConnection.Hole1X]))
+                                                {
+                                                    // connection exists
+                                                    exists = solderConnection;
+                                                    break;
+                                                }
                                             }
                                         }
                                         if (exists != null)
                                         {
-                                            SolderConnections.Remove(exists);
-                                            FormParent.ChangeMade();
+                                            BoardObjects.Remove(exists);
+                                            ChangeMade(new Action(exists, ObjectType.Solder, ActionType.Erasing));
                                         }
-                                        SuggestedSolderConnection = new Connection();
+                                        tempSolderConnection.Refresh(Grid);
+
+                                        SuggestedBoardObject = new BoardObject();
                                         FormParent.PlacingFinished();
                                     }
                                 }
                                 else
                                 {
                                     FormParent.PlacingStarted();
-                                    SuggestedSolderConnection.Hole1Y = hole.Position.Y;
-                                    SuggestedSolderConnection.Hole1X = hole.Position.X;
-                                    SuggestedSolderConnection.State = ConnectionState.Erasing;
+                                    SuggestedBoardObject.Hole1Y = hole.Position.Y;
+                                    SuggestedBoardObject.Hole1X = hole.Position.X;
+                                    SuggestedBoardObject.State = ConnectionState.Erasing;
                                 }
                             }
                         }
@@ -676,89 +635,64 @@ namespace PERF_Design
                         {
                             if (!IsHoleCompletelyInsideChip(hole))
                             {
-                                if (SuggestedWireConnection.Hole1Y != -1)
+                                if (SuggestedBoardObject.Hole1Y != -1)
                                 {
                                     // make wire connection
 
-                                    Connection newWireConnection = new Connection();
-                                    newWireConnection.Hole1Y = SuggestedWireConnection.Hole1Y;
-                                    newWireConnection.Hole1X = SuggestedWireConnection.Hole1X;
+                                    BoardObject newWireConnection = new BoardObject();
+                                    newWireConnection.Hole1Y = SuggestedBoardObject.Hole1Y;
+                                    newWireConnection.Hole1X = SuggestedBoardObject.Hole1X;
                                     newWireConnection.Hole2Y = hole.Position.Y;
                                     newWireConnection.Hole2X = hole.Position.X;
                                     newWireConnection.State = ConnectionState.Placed;
+                                    newWireConnection.ObjectType = ObjectType.Wire;
 
                                     bool alreadyExists = false;
-                                    foreach (Connection wireConnection in WireConnections)
+                                    foreach (BoardObject wireConnection in BoardObjects)
                                     {
-                                        if ((Grid[wireConnection.Hole1Y][wireConnection.Hole1X] == Grid[newWireConnection.Hole1Y][newWireConnection.Hole1X] || Grid[wireConnection.Hole2Y][wireConnection.Hole2X] == Grid[newWireConnection.Hole2Y][newWireConnection.Hole2X])
-                                            || (Grid[wireConnection.Hole1Y][wireConnection.Hole1X] == Grid[newWireConnection.Hole2Y][newWireConnection.Hole2X] || Grid[wireConnection.Hole2Y][wireConnection.Hole2X] == Grid[newWireConnection.Hole1Y][newWireConnection.Hole1X]))
+                                        if (wireConnection.ObjectType == ObjectType.Wire)
                                         {
-                                            // connection already exists
-                                            alreadyExists = true;
-                                            break;
+                                            if ((Grid[wireConnection.Hole1Y][wireConnection.Hole1X] == Grid[newWireConnection.Hole1Y][newWireConnection.Hole1X] || Grid[wireConnection.Hole2Y][wireConnection.Hole2X] == Grid[newWireConnection.Hole2Y][newWireConnection.Hole2X])
+                                                || (Grid[wireConnection.Hole1Y][wireConnection.Hole1X] == Grid[newWireConnection.Hole2Y][newWireConnection.Hole2X] || Grid[wireConnection.Hole2Y][wireConnection.Hole2X] == Grid[newWireConnection.Hole1Y][newWireConnection.Hole1X]))
+                                            {
+                                                // connection already exists
+                                                alreadyExists = true;
+                                                break;
+                                            }
                                         }
                                     }
 
                                     if (!alreadyExists)
                                     {
                                         newWireConnection.Color = FormParent.GetWireColor();
-                                        WireConnections.Add(newWireConnection);
-                                        FormParent.ChangeMade();
+                                        BoardObjects.Add(newWireConnection);
+                                        ChangeMade(new Action(newWireConnection, ObjectType.Wire, ActionType.Placing));
                                     }
+                                    newWireConnection.Refresh(Grid);
 
-                                    // Redraw all squares between the two
-                                    int minY;
-                                    int maxY;
-                                    if (newWireConnection.Hole1Y <= newWireConnection.Hole2Y)
-                                    {
-                                        minY = newWireConnection.Hole1Y;
-                                        maxY = newWireConnection.Hole2Y;
-                                    }
-                                    else
-                                    {
-                                        minY = newWireConnection.Hole2Y;
-                                        maxY = newWireConnection.Hole1Y;
-                                    }
-                                    int minX;
-                                    int maxX;
-                                    if (newWireConnection.Hole1X <= newWireConnection.Hole2X)
-                                    {
-                                        minX = newWireConnection.Hole1X;
-                                        maxX = newWireConnection.Hole2X;
-                                    }
-                                    else
-                                    {
-                                        minX = newWireConnection.Hole2X;
-                                        maxX = newWireConnection.Hole1X;
-                                    }
-                                    for (int y = minY; y <= maxY; y++)
-                                    {
-                                        for (int x = minX; x <= maxX; x++)
-                                        {
-                                            Grid[y][x].Redraw();
-                                        }
-                                    }
-
-                                    SuggestedWireConnection = new Connection();
+                                    SuggestedBoardObject = new BoardObject();
                                     FormParent.PlacingFinished();
                                 }
                                 else
                                 {
                                     bool alreadyExists = false;
-                                    foreach (Connection wireConnection in WireConnections)
+                                    foreach (BoardObject wireConnection in BoardObjects)
                                     {
-                                        if ((wireConnection.Hole1Y == hole.Position.Y && wireConnection.Hole1X == hole.Position.X)
-                                            || wireConnection.Hole2Y == hole.Position.Y && wireConnection.Hole2X == hole.Position.X)
+                                        if (wireConnection.ObjectType == ObjectType.Wire)
                                         {
-                                            alreadyExists = true;
-                                            break;
+                                            if ((wireConnection.Hole1Y == hole.Position.Y && wireConnection.Hole1X == hole.Position.X)
+                                            || wireConnection.Hole2Y == hole.Position.Y && wireConnection.Hole2X == hole.Position.X)
+                                            {
+                                                alreadyExists = true;
+                                                break;
+                                            }
                                         }
                                     }
                                     if (!alreadyExists)
                                     {
                                         FormParent.PlacingStarted();
-                                        SuggestedWireConnection.Hole1Y = hole.Position.Y;
-                                        SuggestedWireConnection.Hole1X = hole.Position.X;
+                                        SuggestedBoardObject.Hole1Y = hole.Position.Y;
+                                        SuggestedBoardObject.Hole1X = hole.Position.X;
                                     }
                                 }
                             }
@@ -768,125 +702,96 @@ namespace PERF_Design
                         {
                             if (!IsHoleCompletelyInsideChip(hole))
                             {
-                                if (SuggestedWireConnection.Hole1Y != -1)
+                                if (SuggestedBoardObject.Hole1Y != -1)
                                 {
                                     // delete wire connection
 
-                                    Connection tempWireConnection = new Connection();
-                                    tempWireConnection.Hole1Y = SuggestedWireConnection.Hole1Y;
-                                    tempWireConnection.Hole1X = SuggestedWireConnection.Hole1X;
+                                    BoardObject tempWireConnection = new BoardObject();
+                                    tempWireConnection.Hole1Y = SuggestedBoardObject.Hole1Y;
+                                    tempWireConnection.Hole1X = SuggestedBoardObject.Hole1X;
                                     tempWireConnection.Hole2Y = hole.Position.Y;
                                     tempWireConnection.Hole2X = hole.Position.X;
 
-                                    Connection exists = null;
-                                    foreach (Connection wireConnection in WireConnections)
+                                    BoardObject exists = null;
+                                    foreach (BoardObject wireConnection in BoardObjects)
                                     {
-                                        if ((Grid[wireConnection.Hole1Y][wireConnection.Hole1X] == Grid[tempWireConnection.Hole1Y][tempWireConnection.Hole1X] && Grid[wireConnection.Hole2Y][wireConnection.Hole2X] == Grid[tempWireConnection.Hole2Y][tempWireConnection.Hole2X])
-                                            || (Grid[wireConnection.Hole1Y][wireConnection.Hole1X] == Grid[tempWireConnection.Hole2Y][tempWireConnection.Hole2X] && Grid[wireConnection.Hole2Y][wireConnection.Hole2X] == Grid[tempWireConnection.Hole1Y][tempWireConnection.Hole1X]))
+                                        if (wireConnection.ObjectType == ObjectType.Wire)
                                         {
-                                            // connection exists
-                                            exists = wireConnection;
-                                            break;
+                                            if ((Grid[wireConnection.Hole1Y][wireConnection.Hole1X] == Grid[tempWireConnection.Hole1Y][tempWireConnection.Hole1X] && Grid[wireConnection.Hole2Y][wireConnection.Hole2X] == Grid[tempWireConnection.Hole2Y][tempWireConnection.Hole2X])
+                                            || (Grid[wireConnection.Hole1Y][wireConnection.Hole1X] == Grid[tempWireConnection.Hole2Y][tempWireConnection.Hole2X] && Grid[wireConnection.Hole2Y][wireConnection.Hole2X] == Grid[tempWireConnection.Hole1Y][tempWireConnection.Hole1X]))
+                                            {
+                                                // connection exists
+                                                exists = wireConnection;
+                                                break;
+                                            }
                                         }
                                     }
                                     if (exists != null)
                                     {
-                                        WireConnections.Remove(exists);
-                                        FormParent.ChangeMade();
+                                        BoardObjects.Remove(exists);
+                                        ChangeMade(new Action(exists, ObjectType.Wire, ActionType.Erasing));
                                     }
+                                    tempWireConnection.Refresh(Grid);
 
-
-                                    // Redraw all squares between the two
-                                    int minY;
-                                    int maxY;
-                                    if (tempWireConnection.Hole1Y <= tempWireConnection.Hole2Y)
-                                    {
-                                        minY = tempWireConnection.Hole1Y;
-                                        maxY = tempWireConnection.Hole2Y;
-                                    }
-                                    else
-                                    {
-                                        minY = tempWireConnection.Hole2Y;
-                                        maxY = tempWireConnection.Hole1Y;
-                                    }
-                                    int minX;
-                                    int maxX;
-                                    if (tempWireConnection.Hole1X <= tempWireConnection.Hole2X)
-                                    {
-                                        minX = tempWireConnection.Hole1X;
-                                        maxX = tempWireConnection.Hole2X;
-                                    }
-                                    else
-                                    {
-                                        minX = tempWireConnection.Hole2X;
-                                        maxX = tempWireConnection.Hole1X;
-                                    }
-                                    for (int y = minY; y <= maxY; y++)
-                                    {
-                                        for (int x = minX; x <= maxX; x++)
-                                        {
-                                            Grid[y][x].Redraw();
-                                        }
-                                    }
-
-                                    SuggestedWireConnection = new Connection();
+                                    SuggestedBoardObject = new BoardObject();
                                     FormParent.PlacingFinished();
                                 }
                                 else
                                 {
                                     FormParent.PlacingStarted();
-                                    SuggestedWireConnection.Hole1Y = hole.Position.Y;
-                                    SuggestedWireConnection.Hole1X = hole.Position.X;
-                                    SuggestedWireConnection.State = ConnectionState.Erasing;
+                                    SuggestedBoardObject.Hole1Y = hole.Position.Y;
+                                    SuggestedBoardObject.Hole1X = hole.Position.X;
+                                    SuggestedBoardObject.State = ConnectionState.Erasing;
                                 }
                             }
                         }
                         break;
                     case Tool.Chip:
                         {
-                            if (SuggestedChip.TopLeftHoleY != -1)
+                            if (SuggestedBoardObject.Hole1Y != -1)
                             {
-                                if (Grid[SuggestedChip.TopLeftHoleY][SuggestedChip.TopLeftHoleX] != hole)
+                                if (Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X] != hole)
                                 {
-                                    Hole tempHole1 = Grid[SuggestedChip.TopLeftHoleY][SuggestedChip.TopLeftHoleX];
+                                    Hole tempHole1 = Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X];
                                     Hole tempHole2 = hole;
 
-                                    Chip newChip = new Chip();
+                                    BoardObject newChip = new BoardObject();
+                                    newChip.ObjectType = ObjectType.Chip;
 
                                     if (tempHole1.Position.X <= tempHole2.Position.X && tempHole1.Position.Y <= tempHole2.Position.Y)
                                     {
-                                        newChip.TopLeftHoleY = tempHole1.Position.Y;
-                                        newChip.TopLeftHoleX = tempHole1.Position.X;
-                                        newChip.BottomRightHoleY = tempHole2.Position.Y;
-                                        newChip.BottomRightHoleX = tempHole2.Position.X;
+                                        newChip.Hole1Y = tempHole1.Position.Y;
+                                        newChip.Hole1X = tempHole1.Position.X;
+                                        newChip.Hole2Y = tempHole2.Position.Y;
+                                        newChip.Hole2X = tempHole2.Position.X;
                                     }
                                     else if (tempHole1.Position.X >= tempHole2.Position.X && tempHole1.Position.Y >= tempHole2.Position.Y)
                                     {
-                                        newChip.TopLeftHoleY = tempHole2.Position.Y;
-                                        newChip.TopLeftHoleX = tempHole2.Position.X;
-                                        newChip.BottomRightHoleY = tempHole1.Position.Y;
-                                        newChip.BottomRightHoleX = tempHole1.Position.X;
+                                        newChip.Hole1Y = tempHole2.Position.Y;
+                                        newChip.Hole1X = tempHole2.Position.X;
+                                        newChip.Hole2Y = tempHole1.Position.Y;
+                                        newChip.Hole2X = tempHole1.Position.X;
                                     }
                                     else if (tempHole1.Position.X <= tempHole2.Position.X && tempHole1.Position.Y >= tempHole2.Position.Y)
                                     {
-                                        newChip.TopLeftHoleY = tempHole2.Position.Y;
-                                        newChip.TopLeftHoleX = tempHole1.Position.X;
-                                        newChip.BottomRightHoleY = tempHole1.Position.Y;
-                                        newChip.BottomRightHoleX = tempHole2.Position.X;
+                                        newChip.Hole1Y = tempHole2.Position.Y;
+                                        newChip.Hole1X = tempHole1.Position.X;
+                                        newChip.Hole2Y = tempHole1.Position.Y;
+                                        newChip.Hole2X = tempHole2.Position.X;
                                     }
                                     else if (tempHole1.Position.X >= tempHole2.Position.X && tempHole1.Position.Y <= tempHole2.Position.Y)
                                     {
-                                        newChip.TopLeftHoleY = tempHole1.Position.Y;
-                                        newChip.TopLeftHoleX = tempHole2.Position.X;
-                                        newChip.BottomRightHoleY = tempHole2.Position.Y;
-                                        newChip.BottomRightHoleX = tempHole1.Position.X;
+                                        newChip.Hole1Y = tempHole1.Position.Y;
+                                        newChip.Hole1X = tempHole2.Position.X;
+                                        newChip.Hole2Y = tempHole2.Position.Y;
+                                        newChip.Hole2X = tempHole1.Position.X;
                                     }
                                     else
                                     {
                                         return; // should never be here
                                     }
 
-                                    if (newChip.BottomRightHoleX - newChip.TopLeftHoleX <= newChip.BottomRightHoleY - newChip.TopLeftHoleY)
+                                    if (newChip.Hole2X - newChip.Hole1X <= newChip.Hole2Y - newChip.Hole1Y)
                                     {
                                         newChip.Orientation = Orientation.Up;
                                     }
@@ -910,23 +815,26 @@ namespace PERF_Design
                                         orientationAddX = 1;
                                     }
 
-                                    for (int y = newChip.TopLeftHoleY - orientationAddY; y <= newChip.BottomRightHoleY + orientationAddY; y++)
+                                    for (int y = newChip.Hole1Y - orientationAddY; y <= newChip.Hole2Y + orientationAddY; y++)
                                     {
-                                        for (int x = newChip.TopLeftHoleX - orientationAddX; x <= newChip.BottomRightHoleX + orientationAddX; x++)
+                                        for (int x = newChip.Hole1X - orientationAddX; x <= newChip.Hole2X + orientationAddX; x++)
                                         {
                                             if (y >= 0 && y < Preferences.GridHeight && x >= 0 && x < Preferences.GridWidth)
                                             {
                                                 // check if overlap other chips
-                                                foreach (Chip otherChip in Chips)
+                                                foreach (BoardObject otherChip in BoardObjects)
                                                 {
-                                                    for (int otherChipY = otherChip.TopLeftHoleY; otherChipY <= otherChip.BottomRightHoleY; otherChipY++)
+                                                    if (otherChip.ObjectType == ObjectType.Chip)
                                                     {
-                                                        for (int otherChipX = otherChip.TopLeftHoleX; otherChipX <= otherChip.BottomRightHoleX; otherChipX++)
+                                                        for (int otherChipY = otherChip.Hole1Y; otherChipY <= otherChip.Hole2Y; otherChipY++)
                                                         {
-                                                            if (y == otherChipY && x == otherChipX)
+                                                            for (int otherChipX = otherChip.Hole1X; otherChipX <= otherChip.Hole2X; otherChipX++)
                                                             {
-                                                                // chip overlaps
-                                                                overlap = true;
+                                                                if (y == otherChipY && x == otherChipX)
+                                                                {
+                                                                    // chip overlaps
+                                                                    overlap = true;
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -938,42 +846,32 @@ namespace PERF_Design
                                     {
                                         newChip.Name = Microsoft.VisualBasic.Interaction.InputBox("Please enter a chip name:", "Chip Name", "", -1, -1);
 
-                                        Chips.Add(newChip);
-                                        FormParent.ChangeMade();
-
-                                        for (int y = newChip.TopLeftHoleY - orientationAddY; y <= newChip.BottomRightHoleY + orientationAddY; y++)
-                                        {
-                                            for (int x = newChip.TopLeftHoleX - orientationAddX; x <= newChip.BottomRightHoleX + orientationAddX; x++)
-                                            {
-                                                if (y >= 0 && y < Preferences.GridHeight && x >= 0 && x < Preferences.GridWidth)
-                                                {
-                                                    Grid[y][x].Redraw();
-                                                }
-                                            }
-                                        }
+                                        BoardObjects.Add(newChip);
+                                        ChangeMade(new Action(newChip, ObjectType.Chip, ActionType.Placing));
+                                        newChip.Refresh(Grid);
                                     }
                                     else
                                     {
                                         // overlap
-                                        Grid[SuggestedChip.TopLeftHoleY][SuggestedChip.TopLeftHoleX].Redraw();
+                                        Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X].Redraw();
                                     }
 
-                                    SuggestedChip = new Chip();
+                                    SuggestedBoardObject = new BoardObject();
                                     FormParent.PlacingFinished();
                                 }
                             }
                             else
                             {
                                 FormParent.PlacingStarted();
-                                SuggestedChip.TopLeftHoleY = hole.Position.Y;
-                                SuggestedChip.TopLeftHoleX = hole.Position.X;
+                                SuggestedBoardObject.Hole1Y = hole.Position.Y;
+                                SuggestedBoardObject.Hole1X = hole.Position.X;
                                 hole.Redraw();
                             }
                         }
                         break;
                     case Tool.RotateChip:
                         {
-                            Chip chipUnderMouse = FindChipOverHole(hole);
+                            BoardObject chipUnderMouse = FindChipOverHole(hole);
                             if (chipUnderMouse != null)
                             {
                                 switch (chipUnderMouse.Orientation)
@@ -991,47 +889,19 @@ namespace PERF_Design
                                         chipUnderMouse.Orientation = Orientation.Up;
                                         break;
                                 }
-                                FormParent.ChangeMade();
-                                for (int y = chipUnderMouse.TopLeftHoleY - 1; y <= chipUnderMouse.BottomRightHoleY + 1; y++)
-                                {
-                                    for (int x = chipUnderMouse.TopLeftHoleX - 1; x <= chipUnderMouse.BottomRightHoleX + 1; x++)
-                                    {
-                                        if (y >= 0 && y < Preferences.GridHeight && x >= 0 && x < Preferences.GridWidth)
-                                        {
-                                            Grid[y][x].Redraw();
-                                        }
-                                    }
-                                }
+                                ChangeMade(new Action(chipUnderMouse, ObjectType.Chip, ActionType.Rotating));
+                                chipUnderMouse.Refresh(Grid);
                             }
                         }
                         break;
                     case Tool.EraseChip:
                         {
-                            Chip chipUnderMouse = FindChipOverHole(hole);
+                            BoardObject chipUnderMouse = FindChipOverHole(hole);
                             if (chipUnderMouse != null)
                             {
-                                Chips.Remove(chipUnderMouse);
-                                FormParent.ChangeMade();
-                                int orientationAddY = 0;
-                                int orientationAddX = 0;
-                                if (chipUnderMouse.Orientation == Orientation.Up || chipUnderMouse.Orientation == Orientation.Down)
-                                {
-                                    orientationAddY = 1;
-                                }
-                                else
-                                {
-                                    orientationAddX = 1;
-                                }
-                                for (int y = chipUnderMouse.TopLeftHoleY - orientationAddY; y <= chipUnderMouse.BottomRightHoleY + orientationAddY; y++)
-                                {
-                                    for (int x = chipUnderMouse.TopLeftHoleX - orientationAddX; x <= chipUnderMouse.BottomRightHoleX + orientationAddX; x++)
-                                    {
-                                        if (y >= 0 && y < Preferences.GridHeight && x >= 0 && x < Preferences.GridWidth)
-                                        {
-                                            Grid[y][x].Redraw();
-                                        }
-                                    }
-                                }
+                                BoardObjects.Remove(chipUnderMouse);
+                                ChangeMade(new Action(chipUnderMouse, ObjectType.Chip, ActionType.Erasing));
+                                chipUnderMouse.Refresh(Grid);
                             }
                         }
                         break;
@@ -1042,31 +912,34 @@ namespace PERF_Design
         private bool IsHoleCompletelyInsideChip(Hole hole)
         {
             bool holeInsideChip = false;
-            foreach (Chip chip in Chips)
+            foreach (BoardObject chip in BoardObjects)
             {
-                int orientationAddY = 0;
-                int orientationAddX = 0;
-                if (chip.Orientation == Orientation.Up || chip.Orientation == Orientation.Down)
+                if (chip.ObjectType == ObjectType.Chip)
                 {
-                    orientationAddX = 1;
-                }
-                else
-                {
-                    orientationAddY = 1;
-                }
-                // X and Y are flipped for this one as we want to allow solder from the side pins
-                //////////////////////////
-                // DO NOT COPY THIS ONE //
-                //////////////////////////
-                for (int y = chip.TopLeftHoleY + orientationAddY; y <= chip.BottomRightHoleY - orientationAddY; y++)
-                {
-                    for (int x = chip.TopLeftHoleX + orientationAddX; x <= chip.BottomRightHoleX - orientationAddX; x++)
+                    int orientationAddY = 0;
+                    int orientationAddX = 0;
+                    if (chip.Orientation == Orientation.Up || chip.Orientation == Orientation.Down)
                     {
-                        if (y == hole.Position.Y && x == hole.Position.X)
+                        orientationAddX = 1;
+                    }
+                    else
+                    {
+                        orientationAddY = 1;
+                    }
+                    // X and Y are flipped for this one as we want to allow solder from the side pins
+                    //////////////////////////
+                    // DO NOT COPY THIS ONE //
+                    //////////////////////////
+                    for (int y = chip.Hole1Y + orientationAddY; y <= chip.Hole2Y - orientationAddY; y++)
+                    {
+                        for (int x = chip.Hole1X + orientationAddX; x <= chip.Hole2X - orientationAddX; x++)
                         {
-                            // chip overlaps
-                            holeInsideChip = true;
-                            break;
+                            if (y == hole.Position.Y && x == hole.Position.X)
+                            {
+                                // chip overlaps
+                                holeInsideChip = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -1074,25 +947,128 @@ namespace PERF_Design
             return holeInsideChip;
         }
 
-        private Chip FindChipOverHole(Hole hole)
+        private BoardObject FindChipOverHole(Hole hole)
         {
-            Chip chipOverHole = null;
-            foreach (Chip chip in Chips)
+            BoardObject chipOverHole = null;
+            foreach (BoardObject chip in BoardObjects)
             {
-                for (int y = chip.TopLeftHoleY; y <= chip.BottomRightHoleY; y++)
+                if (chip.ObjectType == ObjectType.Chip)
                 {
-                    for (int x = chip.TopLeftHoleX; x <= chip.BottomRightHoleX; x++)
+                    for (int y = chip.Hole1Y; y <= chip.Hole2Y; y++)
                     {
-                        if (y == hole.Position.Y && x == hole.Position.X)
+                        for (int x = chip.Hole1X; x <= chip.Hole2X; x++)
                         {
-                            // chip overlaps
-                            chipOverHole = chip;
-                            break;
+                            if (y == hole.Position.Y && x == hole.Position.X)
+                            {
+                                // chip overlaps
+                                chipOverHole = chip;
+                                break;
+                            }
                         }
                     }
                 }
             }
             return chipOverHole;
+        }
+
+        public void ChangeMade(Action newAction)
+        {
+            Actions.Add(newAction);
+            FormParent.ChangeMade();
+        }
+
+        public void UndoAction()
+        {
+            if (Actions.Count > 0)
+            {
+                Action lastAction = Actions.Last();
+                switch (lastAction.ObjectType)
+                {
+                    case ObjectType.Solder:
+                        {
+                            switch (lastAction.ActionType)
+                            {
+                                case ActionType.Placing:
+                                    {
+                                        BoardObjects.Remove(lastAction.Object);
+                                        lastAction.Object.Refresh(Grid);
+                                        break;
+                                    }
+                                case ActionType.Erasing:
+                                    {
+                                        BoardObjects.Add(lastAction.Object);
+                                        lastAction.Object.Refresh(Grid);
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                    case ObjectType.Wire:
+                        {
+                            switch (lastAction.ActionType)
+                            {
+                                case ActionType.Placing:
+                                    {
+                                        BoardObjects.Remove(lastAction.Object);
+                                        lastAction.Object.Refresh(Grid);
+                                        break;
+                                    }
+                                case ActionType.Erasing:
+                                    {
+                                        BoardObjects.Add(lastAction.Object);
+                                        lastAction.Object.Refresh(Grid);
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                    case ObjectType.Chip:
+                        {
+                            switch (lastAction.ActionType)
+                            {
+                                case ActionType.Placing:
+                                    {
+                                        BoardObjects.Remove(lastAction.Object);
+                                        lastAction.Object.Refresh(Grid);
+                                        break;
+                                    }
+                                case ActionType.Rotating:
+                                    {
+                                        switch (lastAction.Object.Orientation)
+                                        {
+                                            case Orientation.Up:
+                                                lastAction.Object.Orientation = Orientation.Left;
+                                                break;
+                                            case Orientation.Right:
+                                                lastAction.Object.Orientation = Orientation.Up;
+                                                break;
+                                            case Orientation.Down:
+                                                lastAction.Object.Orientation = Orientation.Right;
+                                                break;
+                                            case Orientation.Left:
+                                                lastAction.Object.Orientation = Orientation.Down;
+                                                break;
+                                        }
+                                        lastAction.Object.Refresh(Grid);
+                                        break;
+                                    }
+                                case ActionType.Erasing:
+                                    {
+                                        BoardObjects.Add(lastAction.Object);
+                                        lastAction.Object.Refresh(Grid);
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                }
+                Actions.RemoveAt(Actions.Count - 1);
+            }
+
+            if (Actions.Count == 0)
+            {
+                FormParent.ActionsEmpty();
+            }
         }
 
         protected override void OnPaint(PaintEventArgs pe)
@@ -1126,67 +1102,70 @@ namespace PERF_Design
                         Rectangle downSolderRect = new Rectangle(new Point((x * Preferences.GridSize) + Preferences.Offset / 2, (y * Preferences.GridSize) + Preferences.Offset / 2), new Size(Preferences.HoleSize + Preferences.Offset, Preferences.Offset / 2 + Preferences.HoleSize + Preferences.Offset));
                         Rectangle upSolderRect = new Rectangle(new Point((x * Preferences.GridSize) + Preferences.Offset / 2, (y * Preferences.GridSize) + 0), new Size(Preferences.HoleSize + Preferences.Offset, Preferences.Offset + Preferences.HoleSize + Preferences.Offset / 2));
 
-                        foreach (Connection solderConnection in SolderConnections)
+                        foreach (BoardObject solderConnection in BoardObjects)
                         {
-                            Hole otherSolderHole = null;
-                            if (solderConnection.Hole1Y != -1)
+                            if (solderConnection.ObjectType == ObjectType.Solder)
                             {
-                                if (Grid[solderConnection.Hole1Y][solderConnection.Hole1X] == hole)
+                                Hole otherSolderHole = null;
+                                if (solderConnection.Hole1Y != -1)
                                 {
-                                    otherSolderHole = Grid[solderConnection.Hole2Y][solderConnection.Hole2X];
+                                    if (Grid[solderConnection.Hole1Y][solderConnection.Hole1X] == hole)
+                                    {
+                                        otherSolderHole = Grid[solderConnection.Hole2Y][solderConnection.Hole2X];
+                                    }
                                 }
-                            }
-                            if (solderConnection.Hole2Y != -1)
-                            {
-                                if (Grid[solderConnection.Hole2Y][solderConnection.Hole2X] == hole)
+                                if (solderConnection.Hole2Y != -1)
                                 {
-                                    otherSolderHole = Grid[solderConnection.Hole1Y][solderConnection.Hole1X];
+                                    if (Grid[solderConnection.Hole2Y][solderConnection.Hole2X] == hole)
+                                    {
+                                        otherSolderHole = Grid[solderConnection.Hole1Y][solderConnection.Hole1X];
+                                    }
                                 }
-                            }
-                            if (otherSolderHole != null)
-                            {
-                                if (otherSolderHole.Position.X > hole.Position.X)
+                                if (otherSolderHole != null)
                                 {
-                                    // right
-                                    pe.Graphics.FillRectangle(solderBrush, rightSolderRect);
-                                }
-                                else if (otherSolderHole.Position.X < hole.Position.X)
-                                {
-                                    // left
-                                    pe.Graphics.FillRectangle(solderBrush, leftSolderRect);
-                                }
-                                else if (otherSolderHole.Position.Y > hole.Position.Y)
-                                {
-                                    // down
-                                    pe.Graphics.FillRectangle(solderBrush, downSolderRect);
-                                }
-                                else if (otherSolderHole.Position.Y < hole.Position.Y)
-                                {
-                                    // up
-                                    pe.Graphics.FillRectangle(solderBrush, upSolderRect);
+                                    if (otherSolderHole.Position.X > hole.Position.X)
+                                    {
+                                        // right
+                                        pe.Graphics.FillRectangle(solderBrush, rightSolderRect);
+                                    }
+                                    else if (otherSolderHole.Position.X < hole.Position.X)
+                                    {
+                                        // left
+                                        pe.Graphics.FillRectangle(solderBrush, leftSolderRect);
+                                    }
+                                    else if (otherSolderHole.Position.Y > hole.Position.Y)
+                                    {
+                                        // down
+                                        pe.Graphics.FillRectangle(solderBrush, downSolderRect);
+                                    }
+                                    else if (otherSolderHole.Position.Y < hole.Position.Y)
+                                    {
+                                        // up
+                                        pe.Graphics.FillRectangle(solderBrush, upSolderRect);
+                                    }
                                 }
                             }
                         }
 
                         Hole otherSuggestedSolderHole = null;
-                        if (SuggestedSolderConnection.Hole1Y != -1 && SuggestedSolderConnection.Hole2Y != -1)
+                        if (SuggestedBoardObject.Hole1Y != -1 && SuggestedBoardObject.Hole2Y != -1)
                         {
-                            if (Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X] == hole)
+                            if (Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X] == hole)
                             {
-                                otherSuggestedSolderHole = Grid[SuggestedSolderConnection.Hole2Y][SuggestedSolderConnection.Hole2X];
+                                otherSuggestedSolderHole = Grid[SuggestedBoardObject.Hole2Y][SuggestedBoardObject.Hole2X];
                             }
                         }
-                        if (SuggestedSolderConnection.Hole1Y != -1 && SuggestedSolderConnection.Hole2Y != -1)
+                        if (SuggestedBoardObject.Hole1Y != -1 && SuggestedBoardObject.Hole2Y != -1)
                         {
-                            if (Grid[SuggestedSolderConnection.Hole2Y][SuggestedSolderConnection.Hole2X] == hole)
+                            if (Grid[SuggestedBoardObject.Hole2Y][SuggestedBoardObject.Hole2X] == hole)
                             {
-                                otherSuggestedSolderHole = Grid[SuggestedSolderConnection.Hole1Y][SuggestedSolderConnection.Hole1X];
+                                otherSuggestedSolderHole = Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X];
                             }
                         }
-                        if (otherSuggestedSolderHole != null)
+                        if (otherSuggestedSolderHole != null && (SelectedTool == Tool.Solder || SelectedTool == Tool.EraseSolder))
                         {
                             SolidBrush brushToUse = null;
-                            if (SuggestedSolderConnection.State == ConnectionState.Suggested)
+                            if (SuggestedBoardObject.State == ConnectionState.Suggested)
                             {
                                 brushToUse = suggestedSolderBrush;
                             }
@@ -1217,9 +1196,9 @@ namespace PERF_Design
                             }
                         }
 
-                        if (SuggestedChip.TopLeftHoleY != -1)
+                        if (SuggestedBoardObject.Hole1Y != -1 && (SelectedTool == Tool.Chip))
                         {
-                            if (Grid[SuggestedChip.TopLeftHoleY][SuggestedChip.TopLeftHoleX] == hole)
+                            if (Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X] == hole)
                             {
                                 pe.Graphics.FillRectangle(suggestedChipBrush, square);
                             }
@@ -1241,12 +1220,12 @@ namespace PERF_Design
                             pe.Graphics.FillRectangle(whiteBrush, outline);
                         }
 
-                        if (SuggestedWireConnection.Hole1Y != -1)
+                        if (SuggestedBoardObject.Hole1Y != -1 && (SelectedTool == Tool.Wire || SelectedTool == Tool.EraseWire))
                         {
 
                             Rectangle innerSquare = new Rectangle(new Point(outline.Location.X + Preferences.HoleSize / 5, outline.Location.Y + Preferences.HoleSize / 5), new Size(Preferences.HoleSize - 2 * (Preferences.HoleSize / 5), Preferences.HoleSize - 2 * (Preferences.HoleSize / 5)));
 
-                            if (Grid[SuggestedWireConnection.Hole1Y][SuggestedWireConnection.Hole1X] == hole)
+                            if (Grid[SuggestedBoardObject.Hole1Y][SuggestedBoardObject.Hole1X] == hole)
                             {
                                 pe.Graphics.FillRectangle(suggestedSolderBrush, innerSquare);
                             }
@@ -1256,103 +1235,107 @@ namespace PERF_Design
                     }
                 }
 
-                foreach (Chip chip in Chips)
+                foreach (BoardObject chip in BoardObjects)
                 {
-                    Rectangle outline = new Rectangle();
-                    Rectangle indicator = new Rectangle();
-                    switch (chip.Orientation)
+                    if (chip.ObjectType == ObjectType.Chip)
                     {
-                        case Orientation.Up:
-                            {
-                                outline = new Rectangle(new Point(Grid[chip.TopLeftHoleY][chip.TopLeftHoleX].Location.X + (Preferences.GridSize / 3), Grid[chip.TopLeftHoleY][chip.TopLeftHoleX].Location.Y - (Preferences.GridSize / 3)),
-                                    new Size((((chip.BottomRightHoleX - chip.TopLeftHoleX) + 1) * Preferences.GridSize) - (2 * (Preferences.GridSize / 3)), (((chip.BottomRightHoleY - chip.TopLeftHoleY) + 1) * Preferences.GridSize) + (2 * (Preferences.GridSize / 3))));
+                        Rectangle outline = new Rectangle();
+                        Rectangle indicator = new Rectangle();
+                        switch (chip.Orientation)
+                        {
+                            case Orientation.Up:
+                                {
+                                    outline = new Rectangle(new Point(Grid[chip.Hole1Y][chip.Hole1X].Location.X + (Preferences.GridSize / 3), Grid[chip.Hole1Y][chip.Hole1X].Location.Y - (Preferences.GridSize / 3)),
+                                        new Size((((chip.Hole2X - chip.Hole1X) + 1) * Preferences.GridSize) - (2 * (Preferences.GridSize / 3)), (((chip.Hole2Y - chip.Hole1Y) + 1) * Preferences.GridSize) + (2 * (Preferences.GridSize / 3))));
 
-                                indicator = new Rectangle(new Point(outline.Location.X + (outline.Width / 2) - (outline.Width / 10), outline.Location.Y), new Size(2 * (outline.Width / 10), (outline.Height / 20)));
-                            }
-                            break;
-                        case Orientation.Right:
-                            {
-                                outline = new Rectangle(new Point(Grid[chip.TopLeftHoleY][chip.TopLeftHoleX].Location.X - (Preferences.GridSize / 3), Grid[chip.TopLeftHoleY][chip.TopLeftHoleX].Location.Y + (Preferences.GridSize / 3)),
-                                    new Size((((chip.BottomRightHoleX - chip.TopLeftHoleX) + 1) * Preferences.GridSize) + (2 * (Preferences.GridSize / 3)), (((chip.BottomRightHoleY - chip.TopLeftHoleY) + 1) * Preferences.GridSize) - (2 * (Preferences.GridSize / 3))));
+                                    indicator = new Rectangle(new Point(outline.Location.X + (outline.Width / 2) - (outline.Width / 10), outline.Location.Y), new Size(2 * (outline.Width / 10), (outline.Height / 20)));
+                                }
+                                break;
+                            case Orientation.Right:
+                                {
+                                    outline = new Rectangle(new Point(Grid[chip.Hole1Y][chip.Hole1X].Location.X - (Preferences.GridSize / 3), Grid[chip.Hole1Y][chip.Hole1X].Location.Y + (Preferences.GridSize / 3)),
+                                        new Size((((chip.Hole2X - chip.Hole1X) + 1) * Preferences.GridSize) + (2 * (Preferences.GridSize / 3)), (((chip.Hole2Y - chip.Hole1Y) + 1) * Preferences.GridSize) - (2 * (Preferences.GridSize / 3))));
 
-                                indicator = new Rectangle(new Point(outline.Location.X + (outline.Width) - (outline.Width / 20), outline.Location.Y + (outline.Height / 2) - (outline.Height / 10)), new Size((outline.Width / 20), 2 * (outline.Height / 10)));
-                            }
-                            break;
-                        case Orientation.Down:
-                            {
-                                outline = new Rectangle(new Point(Grid[chip.TopLeftHoleY][chip.TopLeftHoleX].Location.X + (Preferences.GridSize / 3), Grid[chip.TopLeftHoleY][chip.TopLeftHoleX].Location.Y - (Preferences.GridSize / 3)),
-                                    new Size((((chip.BottomRightHoleX - chip.TopLeftHoleX) + 1) * Preferences.GridSize) - (2 * (Preferences.GridSize / 3)), (((chip.BottomRightHoleY - chip.TopLeftHoleY) + 1) * Preferences.GridSize) + (2 * (Preferences.GridSize / 3))));
+                                    indicator = new Rectangle(new Point(outline.Location.X + (outline.Width) - (outline.Width / 20), outline.Location.Y + (outline.Height / 2) - (outline.Height / 10)), new Size((outline.Width / 20), 2 * (outline.Height / 10)));
+                                }
+                                break;
+                            case Orientation.Down:
+                                {
+                                    outline = new Rectangle(new Point(Grid[chip.Hole1Y][chip.Hole1X].Location.X + (Preferences.GridSize / 3), Grid[chip.Hole1Y][chip.Hole1X].Location.Y - (Preferences.GridSize / 3)),
+                                        new Size((((chip.Hole2X - chip.Hole1X) + 1) * Preferences.GridSize) - (2 * (Preferences.GridSize / 3)), (((chip.Hole2Y - chip.Hole1Y) + 1) * Preferences.GridSize) + (2 * (Preferences.GridSize / 3))));
 
-                                indicator = new Rectangle(new Point(outline.Location.X + (outline.Width / 2) - (outline.Width / 10), outline.Location.Y + outline.Height - (outline.Height / 20)), new Size(2 * (outline.Width / 10), (outline.Height / 20)));
-                            }
-                            break;
-                        case Orientation.Left:
-                            {
-                                outline = new Rectangle(new Point(Grid[chip.TopLeftHoleY][chip.TopLeftHoleX].Location.X - (Preferences.GridSize / 3), Grid[chip.TopLeftHoleY][chip.TopLeftHoleX].Location.Y + (Preferences.GridSize / 3)),
-                                    new Size((((chip.BottomRightHoleX - chip.TopLeftHoleX) + 1) * Preferences.GridSize) + (2 * (Preferences.GridSize / 3)), (((chip.BottomRightHoleY - chip.TopLeftHoleY) + 1) * Preferences.GridSize) - (2 * (Preferences.GridSize / 3))));
+                                    indicator = new Rectangle(new Point(outline.Location.X + (outline.Width / 2) - (outline.Width / 10), outline.Location.Y + outline.Height - (outline.Height / 20)), new Size(2 * (outline.Width / 10), (outline.Height / 20)));
+                                }
+                                break;
+                            case Orientation.Left:
+                                {
+                                    outline = new Rectangle(new Point(Grid[chip.Hole1Y][chip.Hole1X].Location.X - (Preferences.GridSize / 3), Grid[chip.Hole1Y][chip.Hole1X].Location.Y + (Preferences.GridSize / 3)),
+                                        new Size((((chip.Hole2X - chip.Hole1X) + 1) * Preferences.GridSize) + (2 * (Preferences.GridSize / 3)), (((chip.Hole2Y - chip.Hole1Y) + 1) * Preferences.GridSize) - (2 * (Preferences.GridSize / 3))));
 
-                                indicator = new Rectangle(new Point(outline.Location.X, outline.Location.Y + (outline.Height / 2) - (outline.Height / 10)), new Size((outline.Width / 20), 2 * (outline.Height / 10)));
-                            }
-                            break;
+                                    indicator = new Rectangle(new Point(outline.Location.X, outline.Location.Y + (outline.Height / 2) - (outline.Height / 10)), new Size((outline.Width / 20), 2 * (outline.Height / 10)));
+                                }
+                                break;
+                        }
+
+                        pe.Graphics.FillRectangle(whiteBrush, outline);
+                        pe.Graphics.FillRectangle(indicatorBrush, indicator);
+                        pe.Graphics.DrawRectangle(blackPen, outline);
+                        pe.Graphics.DrawRectangle(blackPen, indicator);
+
+
+                        SizeF size = pe.Graphics.MeasureString(chip.Name, chipFont);
+
+                        switch (chip.Orientation)
+                        {
+                            case Orientation.Up:
+                                {
+                                    pe.Graphics.RotateTransform(90);
+                                    pe.Graphics.TranslateTransform(outline.Location.X + outline.Location.Y + size.Height / 2 + outline.Width / 2, outline.Location.Y - outline.Location.X + outline.Height / 2 - size.Width / 2, System.Drawing.Drawing2D.MatrixOrder.Append);
+                                }
+                                break;
+                            case Orientation.Right:
+                                {
+                                    pe.Graphics.TranslateTransform(outline.Width / 2 - size.Width / 2, outline.Height / 2 - size.Height / 2, System.Drawing.Drawing2D.MatrixOrder.Append);
+                                }
+                                break;
+                            case Orientation.Down:
+                                {
+                                    pe.Graphics.RotateTransform(90);
+                                    pe.Graphics.TranslateTransform(outline.Location.X + outline.Location.Y + size.Height / 2 + outline.Width / 2, outline.Location.Y - outline.Location.X + outline.Height / 2 - size.Width / 2, System.Drawing.Drawing2D.MatrixOrder.Append);
+                                }
+                                break;
+                            case Orientation.Left:
+                                {
+                                    pe.Graphics.TranslateTransform(outline.Width / 2 - size.Width / 2, outline.Height / 2 - size.Height / 2, System.Drawing.Drawing2D.MatrixOrder.Append);
+                                }
+                                break;
+                        }
+
+                        pe.Graphics.DrawString(chip.Name, chipFont, blackBrush, outline.Location.X, outline.Location.Y);
+                        pe.Graphics.ResetTransform();
                     }
-
-                    pe.Graphics.FillRectangle(whiteBrush, outline);
-                    pe.Graphics.FillRectangle(indicatorBrush, indicator);
-                    pe.Graphics.DrawRectangle(blackPen, outline);
-                    pe.Graphics.DrawRectangle(blackPen, indicator);
-
-
-                    SizeF size = pe.Graphics.MeasureString(chip.Name, chipFont);
-
-                    switch (chip.Orientation)
-                    {
-                        case Orientation.Up:
-                            {
-                                pe.Graphics.RotateTransform(90);
-                                pe.Graphics.TranslateTransform(outline.Location.X + outline.Location.Y + size.Height / 2 + outline.Width / 2, outline.Location.Y - outline.Location.X + outline.Height / 2 - size.Width / 2, System.Drawing.Drawing2D.MatrixOrder.Append);
-                            }
-                            break;
-                        case Orientation.Right:
-                            {
-                                pe.Graphics.TranslateTransform(outline.Width / 2 - size.Width / 2, outline.Height / 2 - size.Height / 2, System.Drawing.Drawing2D.MatrixOrder.Append);
-                            }
-                            break;
-                        case Orientation.Down:
-                            {
-                                pe.Graphics.RotateTransform(90);
-                                pe.Graphics.TranslateTransform(outline.Location.X + outline.Location.Y + size.Height / 2 + outline.Width / 2, outline.Location.Y - outline.Location.X + outline.Height / 2 - size.Width / 2, System.Drawing.Drawing2D.MatrixOrder.Append);
-                            }
-                            break;
-                        case Orientation.Left:
-                            {
-                                pe.Graphics.TranslateTransform(outline.Width / 2 - size.Width / 2, outline.Height / 2 - size.Height / 2, System.Drawing.Drawing2D.MatrixOrder.Append);
-                            }
-                            break;
-                    }
-
-                    pe.Graphics.DrawString(chip.Name, chipFont, blackBrush, outline.Location.X, outline.Location.Y);
-                    pe.Graphics.ResetTransform();
                 }
 
-
-
-                foreach (Connection wireConnection in WireConnections)
+                foreach (BoardObject wireConnection in BoardObjects)
                 {
-                    using (Pen wirePen = new Pen(wireConnection.Color, Preferences.HoleSize / 4))
+                    if (wireConnection.ObjectType == ObjectType.Wire)
                     {
-                        Point grid1 = new Point((wireConnection.Hole1X * Preferences.GridSize), (wireConnection.Hole1Y * Preferences.GridSize));
-                        Rectangle innerSquare1 = new Rectangle(new Point(grid1.X + Preferences.Offset + (Preferences.HoleSize / 5), grid1.Y + Preferences.Offset + (Preferences.HoleSize / 5)),
-                            new Size(Preferences.HoleSize - 2 * (Preferences.HoleSize / 5), Preferences.HoleSize - 2 * (Preferences.HoleSize / 5)));
-                        Point innerSquare1Centre = new Point(grid1.X + (Preferences.GridSize / 2), grid1.Y + (Preferences.GridSize / 2));
+                        using (Pen wirePen = new Pen(wireConnection.Color, Preferences.HoleSize / 4))
+                        {
+                            Point grid1 = new Point((wireConnection.Hole1X * Preferences.GridSize), (wireConnection.Hole1Y * Preferences.GridSize));
+                            Rectangle innerSquare1 = new Rectangle(new Point(grid1.X + Preferences.Offset + (Preferences.HoleSize / 5), grid1.Y + Preferences.Offset + (Preferences.HoleSize / 5)),
+                                new Size(Preferences.HoleSize - 2 * (Preferences.HoleSize / 5), Preferences.HoleSize - 2 * (Preferences.HoleSize / 5)));
+                            Point innerSquare1Centre = new Point(grid1.X + (Preferences.GridSize / 2), grid1.Y + (Preferences.GridSize / 2));
 
-                        Point grid2 = new Point((wireConnection.Hole2X * Preferences.GridSize), (wireConnection.Hole2Y * Preferences.GridSize));
-                        Rectangle innerSquare2 = new Rectangle(new Point(grid2.X + Preferences.Offset + (Preferences.HoleSize / 5), grid2.Y + Preferences.Offset + (Preferences.HoleSize / 5)),
-                            new Size(Preferences.HoleSize - 2 * (Preferences.HoleSize / 5), Preferences.HoleSize - 2 * (Preferences.HoleSize / 5)));
-                        Point innerSquare2Centre = new Point(grid2.X + (Preferences.GridSize / 2), grid2.Y + (Preferences.GridSize / 2));
+                            Point grid2 = new Point((wireConnection.Hole2X * Preferences.GridSize), (wireConnection.Hole2Y * Preferences.GridSize));
+                            Rectangle innerSquare2 = new Rectangle(new Point(grid2.X + Preferences.Offset + (Preferences.HoleSize / 5), grid2.Y + Preferences.Offset + (Preferences.HoleSize / 5)),
+                                new Size(Preferences.HoleSize - 2 * (Preferences.HoleSize / 5), Preferences.HoleSize - 2 * (Preferences.HoleSize / 5)));
+                            Point innerSquare2Centre = new Point(grid2.X + (Preferences.GridSize / 2), grid2.Y + (Preferences.GridSize / 2));
 
-                        pe.Graphics.DrawLine(wirePen, innerSquare1Centre, innerSquare2Centre);
-                        pe.Graphics.FillRectangle(solderBrush, innerSquare1);
-                        pe.Graphics.FillRectangle(solderBrush, innerSquare2);
+                            pe.Graphics.DrawLine(wirePen, innerSquare1Centre, innerSquare2Centre);
+                            pe.Graphics.FillRectangle(solderBrush, innerSquare1);
+                            pe.Graphics.FillRectangle(solderBrush, innerSquare2);
+                        }
                     }
                 }
             }
@@ -1435,6 +1418,20 @@ namespace PERF_Design
         }
     }
 
+    public enum ObjectType
+    {
+        Solder,
+        Wire,
+        Chip,
+    }
+
+    public enum ActionType
+    {
+        Placing,
+        Erasing,
+        Rotating,
+    }
+
     public enum ConnectionState
     {
         Suggested,
@@ -1462,7 +1459,22 @@ namespace PERF_Design
     }
 
     [Serializable]
-    public class Connection
+    public class Action
+    {
+        public BoardObject Object;
+        public ObjectType ObjectType;
+        public ActionType ActionType;
+
+        public Action(BoardObject targetObject, ObjectType targetObjectType, ActionType actionType)
+        {
+            Object = targetObject;
+            ObjectType = targetObjectType;
+            ActionType = actionType;
+        }
+    }
+
+    [Serializable]
+    public class BoardObject
     {
         public int Hole1X;
         public int Hole1Y;
@@ -1470,8 +1482,11 @@ namespace PERF_Design
         public int Hole2Y;
         public ConnectionState State;
         public Color Color;
+        public ObjectType ObjectType;
+        public string Name;
+        public Orientation Orientation;
 
-        public Connection()
+        public BoardObject()
         {
             Hole1X = -1;
             Hole1Y = -1;
@@ -1479,28 +1494,46 @@ namespace PERF_Design
             Hole2Y = -1;
             State = ConnectionState.Suggested;
             Color = Color.White;
-        }
-    }
-
-    [Serializable]
-    public class Chip
-    {
-        public int TopLeftHoleX;
-        public int TopLeftHoleY;
-        public int BottomRightHoleX;
-        public int BottomRightHoleY;
-        public ConnectionState State;
-        public string Name;
-        public Orientation Orientation;
-
-        public Chip()
-        {
-            TopLeftHoleX = -1;
-            TopLeftHoleY = -1;
-            BottomRightHoleX = -1;
-            BottomRightHoleY = -1;
-            State = ConnectionState.Suggested;
             Orientation = Orientation.Up;
+        }
+
+        public void Refresh(Hole[][] grid)
+        {
+            // Redraw all squares between the two
+            int minY;
+            int maxY;
+            if (Hole1Y <= Hole2Y)
+            {
+                minY = Hole1Y;
+                maxY = Hole2Y;
+            }
+            else
+            {
+                minY = Hole2Y;
+                maxY = Hole1Y;
+            }
+            int minX;
+            int maxX;
+            if (Hole1X <= Hole2X)
+            {
+                minX = Hole1X;
+                maxX = Hole2X;
+            }
+            else
+            {
+                minX = Hole2X;
+                maxX = Hole1X;
+            }
+            for (int y = minY - 1; y <= maxY + 1; y++)
+            {
+                for (int x = minX - 1; x <= maxX + 1; x++)
+                {
+                    if (y >= 0 && y < Preferences.GridHeight && x >= 0 && x < Preferences.GridWidth)
+                    {
+                        grid[y][x].Redraw();
+                    }
+                }
+            }
         }
     }
 

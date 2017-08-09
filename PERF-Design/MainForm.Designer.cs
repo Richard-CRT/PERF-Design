@@ -30,6 +30,7 @@
         {
             this.PanelGridContainer = new System.Windows.Forms.Panel();
             this.PanelControlPanel = new System.Windows.Forms.Panel();
+            this.ButtonUndoAction = new System.Windows.Forms.Button();
             this.PanelColorPicker = new System.Windows.Forms.Panel();
             this.ButtonSave = new System.Windows.Forms.Button();
             this.ButtonNewBoard = new System.Windows.Forms.Button();
@@ -60,6 +61,7 @@
             // PanelControlPanel
             // 
             this.PanelControlPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.PanelControlPanel.Controls.Add(this.ButtonUndoAction);
             this.PanelControlPanel.Controls.Add(this.PanelColorPicker);
             this.PanelControlPanel.Controls.Add(this.ButtonSave);
             this.PanelControlPanel.Controls.Add(this.ButtonNewBoard);
@@ -75,8 +77,18 @@
             this.PanelControlPanel.Controls.Add(this.CheckBoxSolderTool);
             this.PanelControlPanel.Location = new System.Drawing.Point(-1, -1);
             this.PanelControlPanel.Name = "PanelControlPanel";
-            this.PanelControlPanel.Size = new System.Drawing.Size(1125, 48);
+            this.PanelControlPanel.Size = new System.Drawing.Size(1217, 48);
             this.PanelControlPanel.TabIndex = 6;
+            // 
+            // ButtonUndoAction
+            // 
+            this.ButtonUndoAction.Location = new System.Drawing.Point(736, 12);
+            this.ButtonUndoAction.Name = "ButtonUndoAction";
+            this.ButtonUndoAction.Size = new System.Drawing.Size(81, 24);
+            this.ButtonUndoAction.TabIndex = 21;
+            this.ButtonUndoAction.Text = "Undo";
+            this.ButtonUndoAction.UseVisualStyleBackColor = true;
+            this.ButtonUndoAction.Click += new System.EventHandler(this.ButtonUndoAction_Click);
             // 
             // PanelColorPicker
             // 
@@ -90,7 +102,7 @@
             // 
             // ButtonSave
             // 
-            this.ButtonSave.Location = new System.Drawing.Point(840, 12);
+            this.ButtonSave.Location = new System.Drawing.Point(947, 12);
             this.ButtonSave.Name = "ButtonSave";
             this.ButtonSave.Size = new System.Drawing.Size(81, 24);
             this.ButtonSave.TabIndex = 19;
@@ -100,7 +112,7 @@
             // 
             // ButtonNewBoard
             // 
-            this.ButtonNewBoard.Location = new System.Drawing.Point(753, 12);
+            this.ButtonNewBoard.Location = new System.Drawing.Point(860, 12);
             this.ButtonNewBoard.Name = "ButtonNewBoard";
             this.ButtonNewBoard.Size = new System.Drawing.Size(81, 24);
             this.ButtonNewBoard.TabIndex = 18;
@@ -112,7 +124,7 @@
             // 
             this.CheckBoxEraseWireTool.Appearance = System.Windows.Forms.Appearance.Button;
             this.CheckBoxEraseWireTool.AutoCheck = false;
-            this.CheckBoxEraseWireTool.Location = new System.Drawing.Point(301, 13);
+            this.CheckBoxEraseWireTool.Location = new System.Drawing.Point(301, 12);
             this.CheckBoxEraseWireTool.Name = "CheckBoxEraseWireTool";
             this.CheckBoxEraseWireTool.Size = new System.Drawing.Size(81, 24);
             this.CheckBoxEraseWireTool.TabIndex = 17;
@@ -160,7 +172,7 @@
             // 
             // ButtonLoad
             // 
-            this.ButtonLoad.Location = new System.Drawing.Point(1014, 12);
+            this.ButtonLoad.Location = new System.Drawing.Point(1121, 12);
             this.ButtonLoad.Name = "ButtonLoad";
             this.ButtonLoad.Size = new System.Drawing.Size(81, 24);
             this.ButtonLoad.TabIndex = 13;
@@ -170,7 +182,7 @@
             // 
             // ButtonSaveAs
             // 
-            this.ButtonSaveAs.Location = new System.Drawing.Point(927, 12);
+            this.ButtonSaveAs.Location = new System.Drawing.Point(1034, 12);
             this.ButtonSaveAs.Name = "ButtonSaveAs";
             this.ButtonSaveAs.Size = new System.Drawing.Size(81, 24);
             this.ButtonSaveAs.TabIndex = 12;
@@ -249,7 +261,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoScroll = true;
-            this.ClientSize = new System.Drawing.Size(1184, 561);
+            this.ClientSize = new System.Drawing.Size(1389, 561);
             this.Controls.Add(this.PanelControlPanel);
             this.Controls.Add(this.PanelGridContainer);
             this.Name = "MainForm";
@@ -282,6 +294,7 @@
         private System.Windows.Forms.Button ButtonSave;
         private System.Windows.Forms.Panel PanelColorPicker;
         private System.Windows.Forms.ColorDialog ColorDialog;
+        private System.Windows.Forms.Button ButtonUndoAction;
     }
 }
 
